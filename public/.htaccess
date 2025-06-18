@@ -1,0 +1,20 @@
+# Definir o arquivo de índice padrão
+DirectoryIndex index.php
+
+# Desabilitar listagem de diretórios
+Options -Indexes
+
+# Habilitar reescrita de URL
+RewriteEngine On
+
+# Redirecionar tudo para index.php, exceto arquivos e diretórios existentes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)$ index.php?$1 [L,QSA]
+
+# Segurança adicional
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Frame-Options "SAMEORIGIN"
+</IfModule>

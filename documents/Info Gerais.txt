@@ -1,0 +1,32 @@
+Views Banco forecast
+
+V_DEPARA_ITEM
+V_FATURAMENTO
+V_CARTEIRA_PEDIDOS
+DW..DEPARA_COMERCIAL
+
+
+Portugues Brasil
+setlocale(LC_TIME, 'ptb.UTF-8', 'ptb', 'portuguese', 'portuguese_brazil');
+
+
+
+ID da conta de serviço: consulta-email
+consulta-email@acessos-api-449316.iam.gserviceaccount.com
+
+
+Detalhes da conta de serviço
+Nome: AcessoAPIcadastroemail
+Descrição: serviço para consulta de emails
+E-mail: consulta-email@acessos-api-449316.iam.gserviceaccount.com
+
+ID exclusivo: 113942334739147850329
+
+
+setx GOOGLE_APPLICATION_CREDENTIALS "C:\xampp\htdocs\forecast\chave-credencial.json"
+
+
+
+git add .
+git commit -m "Implementação da nova funcionalidade X"
+git push origin feature-nova-funcionalidade

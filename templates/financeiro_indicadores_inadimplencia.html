@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Indicadores de Inadimplência</title>
+  <link rel="stylesheet" href="/assets/css/estilos.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1, h2 { color: #333; }
+    .indicator { margin-bottom: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Indicadores de Inadimplência</h1>
+  
+  <div class="indicator">
+    <p><strong>Índice de Inadimplência (%):</strong> {{ indicators.indice_inadimplencia }}%</p>
+    <p><strong>Valor Total de Inadimplência:</strong> R$ {{ indicators.valor_total_inadimplencia }}</p>
+    <p><strong>Total de Títulos:</strong> {{ indicators.total_titulos }}</p>
+    <p><strong>Total de Títulos Inadimplentes:</strong> {{ indicators.total_inadimplentes }}</p>
+  </div>
+  
+  <h2>Aging de Contas a Receber</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Faixa</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for faixa, quantidade in indicators.aging_counts.items() %}
+      <tr>
+        <td>{{ faixa }}</td>
+        <td>{{ quantidade }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Ignorar arquivos de configuração do sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar diretórios do sistema
+node_modules/
+vendor/
+.env
+*.log
+
+
+# Diretórios e arquivos que não devem ser versionados
+/vendor
+/node_modules
+/public/assets/js/*.min.js
+/public/assets/css/*.min.css
+/storage
+/.env
+/.vscode
+/.idea
+.DS_Store
+Thumbs.db
+a u t h / c a c h e _ d a t a . h 5  
+ EnterpriseSystem/
+*.zip
+*.rar
+*.bak
+*.log
+node_modules/
+__pycache__/
+auth/cache_data.h5
+chave-credencial.json
+credenciais.json
+chave_workspace.json

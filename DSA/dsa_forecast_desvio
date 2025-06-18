@@ -1,0 +1,125 @@
+import sys
+import os
+import warnings
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import create_engine
+
+# Suprimir warnings
+warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
+
+#%% 1. Conectar ao banco de dados
+print("Conectando ao banco de dados...")
+
+# Adicionar caminho da pasta onde está o módulo de conexão
+sys.path.append(os.path.abspath("C:/xampp/htdocs/forecast/includes/"))
+from db_connection import get_db_connection
+engine = get_db_connection()
+
+# Definir período de análise
+data_atual = pd.Timestamp.today()
+ultimo_mes_fechado = data_atual.replace(day=1) - pd.Timedelta(days=1)
+data_fim = ultimo_mes_fechado.replace(day=1)
+DATA_INICIO = '2024-01-01'
+data_inicio = pd.to_datetime(DATA_INICIO)
+print(f"Analisando dados de {DATA_INICIO} até {data_fim.strftime('%Y-%m-%d')}")
+
+#%% 2. Carregar dados do banco
+print("Carregando dados do banco...")
+query_faturamento = "SELECT * FROM V_FATURAMENTO"
+query_forecast = "SELECT * FROM forecast_system"
+query_itens = "SELECT * FROM V_DEPARA_ITEM"
+df_faturamento = pd.read_sql(query_faturamento, engine)
+df_forecast = pd.read_sql(query_forecast, engine)
+df_item = pd.read_sql(query_itens, engine)
+print(f"Registros carregados - Faturamento: {df_faturamento.shape[0]}, Forecast: {df_forecast.shape[0]}, Itens: {df_item.shape[0]}")
+
+#%% 3. Verificar disponibilidade dos dados
+print("Verificando disponibilidade dos dados...")
+df_faturamento['Data_Faturamento'] = pd.to_datetime(df_faturamento['Data_Faturamento'])
+df_forecast['mes_referencia'] = pd.to_datetime(df_forecast['mes_referencia'])
+
+# Filtrar dados dentro do período de análise
+df_faturamento = df_faturamento[(df_faturamento['Data_Faturamento'] >= data_inicio) & (df_faturamento['Data_Faturamento'] < data_fim)]
+df_forecast = df_forecast[(df_forecast['mes_referencia'] >= data_inicio) & (df_forecast['mes_referencia'] < data_fim)]
+
+if df_faturamento.empty:
+    raise ValueError("Não há registros suficientes na tabela de faturamento dentro do período de análise")
+if df_forecast.empty:
+    raise ValueError("Não há registros suficientes na tabela de forecast_system dentro do período de análise")
+print("Dados disponíveis! Prosseguindo com a análise...")
+
+#%% 4. Agrupamento dos dados por mês
+print("Agrupando dados...")
+df_faturamento['mes_referencia'] = df_faturamento['Data_Faturamento'].dt.to_period('M').astype(str)
+df_forecast['mes_referencia'] = df_forecast['mes_referencia'].dt.to_period('M').astype(str)
+
+# Ajustar tipos de colunas para garantir compatibilidade
+df_faturamento['Cod_produto'] = df_faturamento['Cod_produto'].astype(str).str.strip()
+df_forecast['sku'] = df_forecast['sku'].astype(str).str.strip()
+df_item['CODITEM'] = df_item['CODITEM'].astype(str).str.strip()
+
+# Verificar colunas disponíveis antes do merge
+print("Colunas disponíveis no comparativo:", comparativo.columns)
+print("Colunas disponíveis no df_item:", df_item.columns)
+
+# Listar valores únicos antes do merge para verificar compatibilidade
+print("Valores únicos de Cod_produto em df_faturamento:", df_faturamento['Cod_produto'].unique()[:5])
+print("Valores únicos de CODITEM em df_item:", df_item['CODITEM'].unique()[:5])
+
+# Agregar dados
+faturamento_agg = df_faturamento.groupby(['mes_referencia', 'Cod_produto'])['Quantidade'].sum().reset_index()
+forecast_agg = df_forecast.groupby(['mes_referencia', 'sku'])['quantidade'].sum().reset_index()
+
+# Renomear colunas para merge
+forecast_agg.rename(columns={'sku': 'Cod_produto', 'quantidade': 'Forecast'}, inplace=True)
+faturamento_agg.rename(columns={'Quantidade': 'Realizado'}, inplace=True)
+
+# Merge entre realizado e forecast
+comparativo = pd.merge(faturamento_agg, forecast_agg, on=['mes_referencia', 'Cod_produto'], how='outer').fillna(0)
+
+#%% 5. Cálculo das métricas de erro
+print("Calculando métricas de erro...")
+comparativo['Erro_Absoluto'] = abs(comparativo['Realizado'] - comparativo['Forecast'])
+comparativo['WMAPE'] = (comparativo['Erro_Absoluto'] / comparativo['Realizado']).replace([np.inf, -np.inf], np.nan).fillna(0) * 100
+
+#%% 6. Adicionar informações de itens
+print("Fazendo merge com df_item...")
+comparativo = pd.merge(comparativo, df_item[['CODITEM', 'LINHA', 'MODELO']], left_on='Cod_produto', right_on='CODITEM', how='left')
+
+# Verificar se há valores NaN após o merge e tratá-los
+comparativo[['LINHA', 'MODELO']] = comparativo[['LINHA', 'MODELO']].fillna('Desconhecido')
+
+#%% 14. Gráficos de WMAPE por Linha e Modelo
+print("Gerando gráficos de WMAPE por Linha e Modelo...")
+wmape_linha = comparativo.groupby('LINHA')['WMAPE'].mean().sort_values(ascending=False)
+wmape_modelo = comparativo.groupby('MODELO')['WMAPE'].mean().sort_values(ascending=False)
+
+plt.figure(figsize=(12, 6))
+bars = wmape_linha.plot(kind='bar', color='blue')
+plt.xlabel("Linha")
+plt.ylabel("WMAPE Médio (%)")
+plt.title("WMAPE Médio por Linha em 2024")
+plt.xticks(rotation=45)
+plt.grid()
+for bar in bars.patches:
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), f"{bar.get_height():.1f}%", ha='center', va='bottom')
+plt.show()
+
+plt.figure(figsize=(12, 6))
+bars = wmape_modelo.plot(kind='bar', color='green')
+plt.xlabel("Modelo")
+plt.ylabel("WMAPE Médio (%)")
+plt.title("WMAPE Médio por Modelo em 2024")
+plt.xticks(rotation=45)
+plt.grid()
+for bar in bars.patches:
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), f"{bar.get_height():.1f}%", ha='center', va='bottom')
+plt.show()
+
+print("Análise concluída com sucesso!")
+# %%

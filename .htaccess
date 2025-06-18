@@ -1,0 +1,46 @@
+# Habilita o mecanismo de reescrita de URLs
+RewriteEngine On
+RewriteBase /forecast/
+
+# Remove a extensão .php da URL
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.+)$ $1.php [L]
+
+# Redireciona todas as requisições para o index.php se não for um arquivo ou diretório existente
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/index.php?page=$1 [L,QSA]
+
+# Define a página inicial padrão
+DirectoryIndex public/index.php
+
+# Impede o acesso direto a arquivos sensíveis
+<FilesMatch "\.(htaccess|htpasswd|env|ini|log|sh)$">
+    Require all denied
+</FilesMatch>
+
+# Bloqueia listagem de diretórios
+Options -Indexes
+
+# Segurança: Proteção contra XSS e manipulação de MIME
+Header set X-Content-Type-Options "nosniff"
+Header set X-XSS-Protection "1; mode=block"
+Header set X-Frame-Options "SAMEORIGIN"
+
+# Habilitar cache para melhorar o desempenho de arquivos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+
+# Redirecionamento de erros personalizados
+ErrorDocument 403 /views/403.php
+ErrorDocument 404 /views/404.php
+ErrorDocument 500 /views/500.php
