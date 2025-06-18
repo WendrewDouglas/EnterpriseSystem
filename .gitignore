@@ -5,12 +5,13 @@ Thumbs.db
 # Logs
 *.log
 *.bak
+php_error_log
 
 # Arquivos compactados
 *.zip
 *.rar
 
-# Ambiente e credenciais
+# Ambiente e credenciais (NUNCA versionar isso)
 .env
 *.env
 auth/cache_data.h5
@@ -33,10 +34,9 @@ storage/
 public/assets/js/*.min.js
 public/assets/css/*.min.css
 
-# Pastas auxiliares
+# Pastas auxiliares internas (se quiser ignorar outras)
 EnterpriseSystem/
 Ambiente-Colormaq-clean/
-DSA/
 nssm/
 
 # Scripts de testes ou arquivos temporários
