@@ -1,34 +1,45 @@
-# Ignorar arquivos de configuração do sistema
+# Arquivos e pastas do sistema
 .DS_Store
 Thumbs.db
 
-# Ignorar diretórios do sistema
-node_modules/
-vendor/
-.env
+# Logs
 *.log
+*.bak
 
-
-# Diretórios e arquivos que não devem ser versionados
-/vendor
-/node_modules
-/public/assets/js/*.min.js
-/public/assets/css/*.min.css
-/storage
-/.env
-/.vscode
-/.idea
-.DS_Store
-Thumbs.db
-a u t h / c a c h e _ d a t a . h 5  
- EnterpriseSystem/
+# Arquivos compactados
 *.zip
 *.rar
-*.bak
-*.log
-node_modules/
-__pycache__/
+
+# Ambiente e credenciais
+.env
+*.env
 auth/cache_data.h5
 chave-credencial.json
 credenciais.json
 chave_workspace.json
+
+# Dependências de projeto
+node_modules/
+vendor/
+venv/
+__pycache__/
+
+# IDEs e editores
+.vscode/
+.idea/
+
+# Diretórios de build ou cache
+storage/
+public/assets/js/*.min.js
+public/assets/css/*.min.css
+
+# Pastas auxiliares
+EnterpriseSystem/
+Ambiente-Colormaq-clean/
+DSA/
+nssm/
+
+# Scripts de testes ou arquivos temporários
+test_*
+teste_*
+phpinfo.php
