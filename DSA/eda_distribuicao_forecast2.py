@@ -33,17 +33,13 @@ def main():
                 
         # ============================
         # Calcular o valor para o filtro "finalizado/finalizada"
-        # Obter a data atual (apenas mês/ano) e somar 1 mês
-        current_dt = pd.to_datetime(datetime.now().strftime('%m/%Y'), format='%m/%Y')
-        current_plus_one = current_dt + relativedelta(months=1)
-        # Calcular a diferença em meses entre a data forecast e o "atual + 1"
-        diff_months = (forecast_date.year - current_plus_one.year) * 12 + (forecast_date.month - current_plus_one.month)
-        if diff_months <= 0:
-            finalizado_value = 2
-        else:
-            finalizado_value = diff_months + 2
-        # Exemplo: se hoje for 15/03/2025, current_plus_one será 04/2025.
-        # Se mes_ref for 05/2025: diff_months = 1 → finalizado_value = 2.
+        # current_dt = pd.to_datetime(datetime.now().strftime('%m/%Y'), format='%m/%Y')
+        # current_plus_one = current_dt + relativedelta(months=1)
+        # diff_months = (forecast_date.year - current_plus_one.year) * 12 + (forecast_date.month - current_plus_one.month)
+        # if diff_months <= 0:
+        #     finalizado_value = 2
+        # else:
+        #     finalizado_value = diff_months + 2
         # ============================
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -56,16 +52,37 @@ def main():
         engine = get_db_connection()
                 
         query_faturamento = "SELECT * FROM V_FATURAMENTO"
-        # Utilizar o valor calculado para o filtro 'finalizado' / 'finalizada'
-        query_forecast_modelo = f"SELECT * FROM forecast_entries WHERE finalizado = {finalizado_value}"
-        query_forecast_sku = f"SELECT * FROM forecast_entries_sku WHERE finalizada = {finalizado_value}"
         query_itens = "SELECT * FROM V_DEPARA_ITEM"
         
+        # >>> ALTERAÇÃO PRINCIPAL AQUI <<<
+        # Busca todos os registros do mês referência e, para cada gestor, só mantém o de menor 'finalizado'
+        df_forecast_modelo_full = pd.read_sql(
+            f"SELECT * FROM forecast_entries WHERE mes_referencia = '{mes_ref}'", engine
+        )
+        if not df_forecast_modelo_full.empty:
+            idx = df_forecast_modelo_full.groupby(['cod_gestor'])['finalizado'].idxmin()
+            df_forecast_modelo = df_forecast_modelo_full.loc[idx].reset_index(drop=True)
+        else:
+            df_forecast_modelo = pd.DataFrame()
+        
+        df_forecast_sku_full = pd.read_sql(
+            f"SELECT * FROM forecast_entries_sku WHERE mes_referencia = '{mes_ref}'", engine
+        )
+        if not df_forecast_sku_full.empty:
+            idx_sku = df_forecast_sku_full.groupby(['codigo_gestor'])['finalizada'].idxmin()
+            df_forecast_sku = df_forecast_sku_full.loc[idx_sku].reset_index(drop=True)
+        else:
+            df_forecast_sku = pd.DataFrame()
+        # <<< FIM DAS ALTERAÇÕES ESSENCIAIS <<<
+
         df_faturamento = pd.read_sql(query_faturamento, engine)
-        df_forecast_modelo = pd.read_sql(query_forecast_modelo, engine)
-        df_forecast_sku = pd.read_sql(query_forecast_sku, engine)
         df_itens = pd.read_sql(query_itens, engine)
         
+        # === ... resto do código permanece idêntico ... ===
+        # ... Toda lógica de tratamento dos DataFrames, merges, rateio, ajuste de arredondamento, gravação no banco, etc.
+        # ... (mantém igual ao que você já usa)
+        
+        # Restante do seu código original (sem alteração):
         ultimo_mes_completo = (forecast_date - relativedelta(months=2)).replace(day=1)
         periodo1_inicio = (ultimo_mes_completo - relativedelta(months=2)).replace(day=1)
         periodo1_fim = ultimo_mes_completo + pd.offsets.MonthEnd(0)
@@ -266,14 +283,10 @@ def main():
         final_table = pd.concat([final_df_formatted, forecast_sku_formatted], ignore_index=True)
         
         # Aqui, as consultas agora filtram também pelo valor de finalizado/finalizada
-        df_total_entries = pd.read_sql(
-            f"SELECT SUM(quantidade) AS total_entries FROM forecast_entries WHERE mes_referencia = '{mes_ref}' AND finalizado = {finalizado_value}", engine
-        )
-        df_total_entries_sku = pd.read_sql(
-            f"SELECT SUM(quantidade) AS total_entries_sku FROM forecast_entries_sku WHERE mes_referencia = '{mes_ref}' AND finalizada = {finalizado_value}", engine
-        )
-        total_entries_modelo = df_total_entries.iloc[0]['total_entries'] if df_total_entries.iloc[0]['total_entries'] is not None else 0
-        total_entries_sku = df_total_entries_sku.iloc[0]['total_entries_sku'] if df_total_entries_sku.iloc[0]['total_entries_sku'] is not None else 0
+        df_total_entries = df_forecast_modelo_periodo['quantidade'].sum()
+        df_total_entries_sku = df_forecast_sku_periodo['quantidade'].sum()
+        total_entries_modelo = df_total_entries if df_forecast_modelo_periodo is not None else 0
+        total_entries_sku = df_total_entries_sku if df_forecast_sku_periodo is not None else 0
         
         total_forecast_original = total_entries_modelo + total_entries_sku
         total_rateado = final_table['quantidade'].sum()
