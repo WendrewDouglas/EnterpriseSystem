@@ -3,10 +3,10 @@ require_once __DIR__ . '/../includes/auto_check.php';
 require_once __DIR__ . '/../includes/db_connection.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $user_id = $_POST['id'];
+    $user_id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
     $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    $role = $_POST['role'];
+    $role = $_POST['role'] ?? '';
     $permissions = $_POST['permissions'] ?? [];
 
     if (empty($name) || empty($email) || empty($role)) {
@@ -16,71 +16,114 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     $db = new Database();
-    $conn = $db->getConnection();
-    
-    // Iniciar transação para garantir consistência dos dados
-    sqlsrv_begin_transaction($conn);
-    
-    try {
-        // 1. Atualizar informações básicas do usuário
-        $sql = "UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?";
-        $params = array($name, $email, $role, $user_id);
-        $stmt = sqlsrv_query($conn, $sql, $params);
+    $conn = $db->getConnection(); // recurso sqlsrv_connect
 
+    // Iniciar transação
+    if (sqlsrv_begin_transaction($conn) === false) {
+        $errors = sqlsrv_errors();
+        error_log("Falha ao iniciar transação: " . print_r($errors, true));
+        $_SESSION['error_message'] = "Erro interno.";
+        header("Location: index.php?page=edit_user&id=" . $user_id);
+        exit();
+    }
+
+    try {
+        // Processar a imagem se enviada
+        $imagem_base64 = null;
+        if (isset($_FILES['imagem']) && $_FILES['imagem']['error'] === UPLOAD_ERR_OK) {
+            $arquivo_temporario = $_FILES['imagem']['tmp_name'];
+            $dados_imagem = file_get_contents($arquivo_temporario);
+            $imagem_base64 = base64_encode($dados_imagem);
+        } elseif (isset($_POST['imagem_base64']) && !empty($_POST['imagem_base64'])) {
+            $imagem_base64 = $_POST['imagem_base64'];
+        }
+
+        // 1. Atualizar informações básicas do usuário
+        $tsql = "UPDATE users SET name = ?, email = ?, role = ?";
+        $params = [$name, $email, $role];
+
+        if ($imagem_base64 !== null) {
+            $tsql .= ", imagem = ?";
+            $params[] = $imagem_base64;
+        }
+        $tsql .= " WHERE id = ?";
+        $params[] = $user_id;
+
+        $stmt = sqlsrv_prepare($conn, $tsql, $params);
         if ($stmt === false) {
-            throw new Exception("Erro ao atualizar usuário: " . print_r(sqlsrv_errors(), true));
+            $errors = sqlsrv_errors();
+            throw new Exception("Erro ao preparar atualização de usuário: " . print_r($errors, true));
         }
-        
+        if (sqlsrv_execute($stmt) === false) {
+            $errors = sqlsrv_errors();
+            throw new Exception("Erro ao atualizar usuário: " . print_r($errors, true));
+        }
+        sqlsrv_free_stmt($stmt);
+
         // 2. Remover permissões anteriores
-        $sql_delete = "DELETE FROM user_permissions WHERE user_id = ?";
-        $stmt_delete = sqlsrv_query($conn, $sql_delete, [$user_id]);
-        
+        $tsql_delete = "DELETE FROM user_permissions WHERE user_id = ?";
+        $stmt_delete = sqlsrv_prepare($conn, $tsql_delete, [$user_id]);
         if ($stmt_delete === false) {
-            throw new Exception("Erro ao remover permissões anteriores: " . print_r(sqlsrv_errors(), true));
+            $errors = sqlsrv_errors();
+            throw new Exception("Erro ao preparar remoção de permissões: " . print_r($errors, true));
         }
-        
+        if (sqlsrv_execute($stmt_delete) === false) {
+            $errors = sqlsrv_errors();
+            throw new Exception("Erro ao remover permissões anteriores: " . print_r($errors, true));
+        }
+        sqlsrv_free_stmt($stmt_delete);
+
         // 3. Inserir novas permissões
-        if (!empty($permissions)) {
-            // Preparar declaração para inserção em massa
-            $values = [];
-            $params = [];
-            
-            // Obter lista de páginas disponíveis no sistema
+        if (!empty($permissions) && is_array($permissions)) {
             $available_pages = [
-                'dashboard', 'users', 'add_user', 'edit_user', 'configuracoes',
-                'apontar_forecast', 'consulta_lancamentos', 'historico_forecast',
-                'depara_comercial', 'enviar_sellout', 'export_sellout', 'financeiro',
-                'cursos', 'forecast_geral', 'novo_objetivo', 'aprovacao_OKR', 'novo_kr'
+                'dashboard','users','add_user','edit_user','configuracoes',
+                'apontar_forecast','consulta_lancamentos','historico_forecast',
+                'depara_comercial','enviar_sellout','export_sellout','financeiro',
+                'cursos','forecast_geral','novo_objetivo','aprovacao_OKR',
+                'novo_kr','cadastrar_cursos'
             ];
-            
-            // Para cada página disponível, verificar se o usuário tem permissão
+            $valuesClauses = [];
+            $paramsInsert = [];
             foreach ($available_pages as $page) {
                 $has_access = isset($permissions[$page]) ? 1 : 0;
-                $values[] = "(?, ?, ?)";
-                array_push($params, $user_id, $page, $has_access);
+                // Para cada página, inserimos um registro
+                $valuesClauses[] = "(?, ?, ?)";
+                $paramsInsert[] = $user_id;
+                $paramsInsert[] = $page;
+                $paramsInsert[] = $has_access;
             }
-            
-            // Inserir todas as permissões de uma vez
-            $sql_insert = "INSERT INTO user_permissions (user_id, page_name, has_access) VALUES " . implode(", ", $values);
-            $stmt_insert = sqlsrv_query($conn, $sql_insert, $params);
-            
-            if ($stmt_insert === false) {
-                throw new Exception("Erro ao inserir novas permissões: " . print_r(sqlsrv_errors(), true));
+            if (!empty($valuesClauses)) {
+                $tsql_insert = "INSERT INTO user_permissions (user_id, page_name, has_access) VALUES "
+                              . implode(", ", $valuesClauses);
+                $stmt_insert = sqlsrv_prepare($conn, $tsql_insert, $paramsInsert);
+                if ($stmt_insert === false) {
+                    $errors = sqlsrv_errors();
+                    throw new Exception("Erro ao preparar inserção de permissões: " . print_r($errors, true));
+                }
+                if (sqlsrv_execute($stmt_insert) === false) {
+                    $errors = sqlsrv_errors();
+                    throw new Exception("Erro ao inserir novas permissões: " . print_r($errors, true));
+                }
+                sqlsrv_free_stmt($stmt_insert);
             }
         }
-        
-        // Confirmar transação
-        sqlsrv_commit($conn);
+
+        // Commit
+        if (sqlsrv_commit($conn) === false) {
+            $errors = sqlsrv_errors();
+            throw new Exception("Erro ao confirmar transação: " . print_r($errors, true));
+        }
         $_SESSION['success_message'] = "Usuário atualizado com sucesso!";
-        
     } catch (Exception $e) {
-        // Reverter transação em caso de erro
         sqlsrv_rollback($conn);
         error_log($e->getMessage());
         $_SESSION['error_message'] = "Erro ao atualizar usuário: " . $e->getMessage();
+    } finally {
+        if ($conn) {
+            sqlsrv_close($conn);
+        }
+        header("Location: index.php?page=users");
+        exit();
     }
-
-    header("Location: index.php?page=users");
-    exit();
 }
 ?>

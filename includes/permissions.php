@@ -30,7 +30,7 @@ function verificarPermissao($requerido) {
     
     // Se não encontrou permissão específica, usar as permissões padrão por perfil
     $permissoes = [
-        'admin' => ['dashboard', 'pdv_clientes','cursos', 'users', 'consultar_okr', 'consulta_lancamentos', 'historico_forecast', 'apontar_forecast', 'configuracoes', 'depara_comercial', 'enviar_sellout', 'financeiro', 'run_forecast_update.php', 'forecast_geral', 'novo_objetivo', 'novo_kr', 'aprovacao_OKR', 'edit_user', 'add_user','export_forecast','nova_iniciativa', 'visualizar_objetivo', 'apontar_progresso'],
+        'admin' => ['dashboard', 'OKR_consulta', 'pdv_clientes','cursos', 'users', 'consultar_okr', 'consulta_lancamentos', 'historico_forecast', 'apontar_forecast', 'configuracoes', 'depara_comercial', 'enviar_sellout', 'financeiro', 'run_forecast_update.php', 'forecast_geral', 'novo_objetivo', 'novo_kr', 'aprovacao_OKR', 'edit_user', 'add_user','export_forecast','nova_iniciativa', 'visualizar_objetivo', 'apontar_progresso'],
         'gestor' => ['dashboard', 'apontar_forecast', 'historico_forecast', 'configuracoes', 'sales_demand', 'enviar_sellout'],
         'consulta' => ['dashboard', 'configuracoes', 'historico_forecast', 'enviar_sellout']
     ];
@@ -69,7 +69,7 @@ function usuarioTemPermissao($userId, $pagina) {
         $role = $row_role['role'];
         
         $permissoes = [
-            'admin' => ['dashboard', 'cursos', 'users', 'consultar_okr', 'consulta_lancamentos', 'historico_forecast', 'apontar_forecast', 'configuracoes', 'depara_comercial', 'enviar_sellout', 'financeiro', 'run_forecast_update.php', 'forecast_geral', 'novo_objetivo', 'novo_kr', 'aprovacao_OKR', 'edit_user', 'add_user', 'visualizar_objetivo','apontar_progresso'],
+            'admin' => ['dashboard',  'OKR_consulta', 'cursos', 'users', 'consultar_okr', 'consulta_lancamentos', 'historico_forecast', 'apontar_forecast', 'configuracoes', 'depara_comercial', 'enviar_sellout', 'financeiro', 'run_forecast_update.php', 'forecast_geral', 'novo_objetivo', 'novo_kr', 'aprovacao_OKR', 'edit_user', 'add_user', 'visualizar_objetivo','apontar_progresso'],
             'gestor' => ['dashboard', 'apontar_forecast', 'historico_forecast', 'configuracoes', 'sales_demand', 'enviar_sellout'],
             'consulta' => ['dashboard', 'configuracoes', 'historico_forecast', 'enviar_sellout']
         ];

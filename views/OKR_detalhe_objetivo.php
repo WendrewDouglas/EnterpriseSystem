@@ -53,12 +53,11 @@ $progressoTotal   = 0;
 
 while ($kr = sqlsrv_fetch_array($stmtKRs, SQLSRV_FETCH_ASSOC)) {
 
-  // 🔧 Inicializa os campos para evitar erros caso não existam milestones
+    // 🔧 Inicializa os campos para evitar erros caso não existam milestones
     $kr['progresso'] = 0;
     $kr['ms_atual'] = null;
     $kr['ultimo_valor'] = null;
     $kr['ultima_data'] = null;
-
 
     // 🔍 Buscar Milestones deste KR
     $sqlMS = <<<'SQL'
@@ -95,12 +94,21 @@ SQL;
     // 🔥 Definir cor da barra de progresso
     $corBarraProgresso = '#6c757d'; // Cinza padrão
 
+    // === BLOCO NOVO: Cálculo do Farol de Confiança ===
+    $farol_confianca = '-';
+    // Se no banco está como 0.10 (10%)
+    $margem = isset($kr['margem_confianca']) ? floatval($kr['margem_confianca']) * 100 : null;
+    $direcao = $kr['direcao_metrica'] ?? 'maior'; // maior, menor, intervalo
+
+    $baseline = null;
+    $meta = null;
+    $ultimoMs = null;
+
     if (count($listaMS) > 0) {
         $baseline = $listaMS[0]['valor_esperado'];
         $meta     = $listaMS[count($listaMS) - 1]['valor_esperado'];
 
         // Último milestone com valor_real preenchido
-        $ultimoMs = null;
         foreach (array_reverse($listaMS) as $ms) {
             if ($ms['valor_real'] !== null) {
                 $ultimoMs = $ms;
@@ -108,9 +116,7 @@ SQL;
             }
         }
 
-        // Direção (parametrizar no futuro se quiser)
-        $direcao = 'maior'; // maior, menor, intervalo
-
+        // Cor da barra progresso
         if ($ultimoMs) {
             $real = $ultimoMs['valor_real'];
             $esperado = $ultimoMs['valor_esperado'];
@@ -122,10 +128,74 @@ SQL;
             } elseif ($direcao === 'intervalo') {
                 $corBarraProgresso = ($real >= $baseline && $real <= $meta) ? '#198754' : '#c94444';
             }
+
+            // Cálculo do farol de confiança
+            if ($margem !== null && $esperado != 0) {
+                if ($direcao === 'maior') {
+                    $diff = (($real - $esperado) / $esperado) * 100;
+                    if ($diff <= -$margem) {
+                        $farol_confianca = 'Péssimo';
+                    } elseif ($diff < 0) {
+                        $farol_confianca = 'Ruim';
+                    } elseif ($diff <= $margem) {
+                        $farol_confianca = 'Bom';
+                    } else {
+                        $farol_confianca = 'Ótimo';
+                    }
+                } elseif ($direcao === 'menor') {
+                    $diff = (($esperado - $real) / $esperado) * 100;
+                    if ($diff <= -$margem) {
+                        $farol_confianca = 'Péssimo';
+                    } elseif ($diff < 0) {
+                        $farol_confianca = 'Ruim';
+                    } elseif ($diff <= $margem) {
+                        $farol_confianca = 'Bom';
+                    } else {
+                        $farol_confianca = 'Ótimo';
+                    }
+                } elseif ($direcao === 'intervalo') {
+                    $limiteInf = min($baseline, $meta) - $margem * abs($baseline) / 100;
+                    $limiteSup = max($baseline, $meta) + $margem * abs($meta) / 100;
+                    if ($real < $limiteInf || $real > $limiteSup) {
+                        $farol_confianca = 'Péssimo';
+                    } elseif (
+                        ($real < min($baseline, $meta)) ||
+                        ($real > max($baseline, $meta))
+                    ) {
+                        $farol_confianca = 'Ruim';
+                    } elseif (
+                        ($real >= min($baseline, $meta)) &&
+                        ($real <= max($baseline, $meta))
+                    ) {
+                        // Dentro do intervalo ideal
+                        $distanciaInferior = abs($real - min($baseline, $meta));
+                        $distanciaSuperior = abs($real - max($baseline, $meta));
+                        $margemLimite = $margem * abs($meta - $baseline) / 100;
+                        if ($distanciaInferior < $margemLimite || $distanciaSuperior < $margemLimite) {
+                            $farol_confianca = 'Bom';
+                        } else {
+                            $farol_confianca = 'Ótimo';
+                        }
+                    }
+                }
+            }
         }
     }
-
     $kr['cor_progresso'] = $corBarraProgresso;
+    $kr['farol_confianca'] = $farol_confianca;
+    // === FIM DO BLOCO NOVO ===
+
+    // === Definir cor do farol de confiança ===
+    switch(mb_strtolower($farol_confianca, 'UTF-8')) {
+        case 'péssimo':   $cor_farol_confianca = 'bg-black'; break;
+        case 'ruim':      $cor_farol_confianca = 'bg-danger'; break;
+        case 'moderado':  $cor_farol_confianca = 'bg-warning text-dark'; break;
+        case 'bom':       $cor_farol_confianca = 'bg-success'; break;
+        case 'ótimo':     $cor_farol_confianca = 'bg-purple'; break;
+        default:          $cor_farol_confianca = 'bg-secondary'; break;
+    }
+    $kr['cor_farol_confianca'] = $cor_farol_confianca;
+
 
     // ↘ Cálculo de baseline, meta e progresso do KR
     if (count($listaMS) > 0) {
@@ -155,7 +225,7 @@ SQL;
     }
 
     // ↘ Campos adicionais vindos de key_results
-    $kr['margem_confianca']          = isset($kr['margem_confianca']) ? floatval($kr['margem_confianca']) : null;
+    $kr['margem_confianca'] = isset($kr['margem_confianca']) ? floatval($kr['margem_confianca']) * 100 : null;
     $kr['tipo_shot']                 = $kr['tipo_kr'] ?? null;
     $kr['tipo_frequencia_milestone'] = $kr['tipo_frequencia_milestone'] ?? null;
 
@@ -258,6 +328,8 @@ SQL;
     $krs[] = $kr;
 }
 
+
+
 // 📊 Cálculo da média de progresso do Objetivo
 $mediaProgresso = count($krs) > 0
     ? round($progressoTotal / count($krs), 1)
@@ -322,9 +394,9 @@ include __DIR__ . '/../templates/sidebar.php';
                             <?= htmlspecialchars($kr['status']) ?>
                         </span>
                         <strong class="ms-2"><?= htmlspecialchars($kr['descricao']) ?></strong>
-                        <span class="badge bg-warning ms-2">
-                            Farol: <?= htmlspecialchars($kr['qualidade'] ?? '-') ?>
-                        </span>
+                          <span class="badge <?= $kr['cor_farol_confianca'] ?> ms-2">
+                              Farol Confiança: <?= htmlspecialchars($kr['farol_confianca'] ?? '-') ?>
+                          </span>
                         <?php if (!empty($kr['ms_atual'])): ?>
                             <span class="ms-3 text-success">
                                 ✓ Milestone Atual: 
@@ -356,8 +428,6 @@ include __DIR__ . '/../templates/sidebar.php';
                     <div class="p-3 border-top">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <h6>🔍 Informações do KR</h6>
-                                <p><?= htmlspecialchars($kr['descricao']) ?></p>
                                 <p>🧑‍💼 <strong>Dono:</strong> <?= htmlspecialchars($usuarios[$kr['responsavel']] ?? 'Desconhecido') ?></p>
                                 <p>📅 <strong>Prazo:</strong> <?= isset($kr['data_fim']) ? date_format($kr['data_fim'], 'd/m/Y') : '-' ?></p>
                                 <p>🕒 <strong>Último Check:</strong> <?= isset($kr['ultimo_valor']) ? htmlspecialchars($kr['ultimo_valor']) : '-' ?> em <?= isset($kr['ultima_data']) ? htmlspecialchars($kr['ultima_data']) : '-' ?></p>
@@ -373,13 +443,13 @@ include __DIR__ . '/../templates/sidebar.php';
                                 </p>
 
                                 <!-- Botões -->
-                                <button class="btn btn-outline-primary btn-sm mt-2"
+                                <button class="btn btn-warning btn-sm fw-bold mt-2 px-3 shadow-sm"
                                     onclick="abrirModalApontamento(
                                         '<?= $krId ?>',
                                         '<?= $kr['id_kr'] ?>',
                                         <?= isset($kr['ms_atual']) ? $kr['ms_atual'] : 'null' ?>
                                     )">
-                                    📈 Apontar Progresso
+                                    <i class="bi bi-graph-up-arrow me-1"></i> Apontar Progresso
                                 </button>
                             </div>
 
@@ -429,9 +499,9 @@ include __DIR__ . '/../templates/sidebar.php';
                                                                 </option>
                                                             <?php endforeach; ?>
                                                         </select>
-                                                        <button class="btn btn-sm btn-outline-info mt-2"
+                                                        <button class="btn btn-info btn-sm fw-bold mt-2 px-3 shadow-sm"
                                                             onclick="abrirModalCustos('<?= $ini['id_iniciativa'] ?>', '<?= htmlspecialchars($ini['descricao']) ?>')">
-                                                            💰 Custos
+                                                            <i class="bi bi-cash-coin me-1"></i> Apontar Despesas
                                                         </button>
                                                     </div>
                                                 </div>
@@ -873,6 +943,16 @@ document.getElementById('btnSalvarCustos').addEventListener('click', () => {
 </script>
 
 <style>
+
+  .bg-purple {
+    background-color: #4B0082 !important; /* Roxo */
+    color: #fff !important;
+}
+.bg-black {
+    background-color: #000 !important;   /* Preto */
+    color: #fff !important;
+}
+
 /* === Layout e Tabela do Modal === */
 #tabelaApontamento table {
   width: 100%;

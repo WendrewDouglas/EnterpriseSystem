@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auto_check.php';
 require_once __DIR__ . '/../includes/db_connectionOKR.php';
-require_once __DIR__ . '/../includes/db_connection.php'; // ForecastDB
+require_once __DIR__ . '/../includes/db_connection.php';
 require_once __DIR__ . '/../includes/permissions.php';
 
 if (session_status() == PHP_SESSION_NONE) {
@@ -15,21 +15,18 @@ $pageTitle = 'Consulta de OKRs - Pilares e Objetivos';
 include __DIR__ . '/../templates/header.php';
 include __DIR__ . '/../templates/sidebar.php';
 
-// Conexão OKR
 $dbOKR = new OKRDatabase();
 $connOKR = $dbOKR->getConnection();
 if (!$connOKR) {
     die("<div class='alert alert-danger'>Erro de conexão com o banco OKR.</div>");
 }
 
-// Conexão ForecastDB para usuários
 $dbForecast = new Database();
 $connForecast = $dbForecast->getConnection();
 if (!$connForecast) {
     die("<div class='alert alert-danger'>Erro de conexão com banco ForecastDB.</div>");
 }
 
-// Buscar usuários ativos no ForecastDB
 $sqlUsers = "SELECT id, name FROM users WHERE status = 'ativo'";
 $stmtUsers = sqlsrv_query($connForecast, $sqlUsers);
 $usuarios = [];
@@ -39,7 +36,6 @@ if ($stmtUsers) {
     }
 }
 
-// Definição dos pilares
 $pilares = [
     'Financeiro'                => ['icone' => 'bi-currency-dollar', 'cor' => '#B8860B'],
     'Clientes'                  => ['icone' => 'bi-people', 'cor' => '#006400'],
@@ -47,19 +43,45 @@ $pilares = [
     'Aprendizado e Crescimento' => ['icone' => 'bi-mortarboard', 'cor' => '#FF1493']
 ];
 
-// Função de normalização do nome do pilar
 function normalizaPilar($texto) {
     return ucfirst(mb_strtolower(trim($texto)));
 }
 
-// Inicializa dados dos pilares
 $dadosPilares = [];
 foreach ($pilares as $nome => $info) {
     $dadosPilares[$nome] = [];
 }
 
-// Query principal
+// ✅ SQL Corrigido
 $sql = "
+WITH ProgressoKR AS (
+    SELECT 
+        kr.id_kr,
+        kr.id_objetivo,
+        CASE 
+            WHEN (msMeta.valor_esperado - msBase.valor_esperado) <> 0 THEN
+                ROUND( ((ISNULL(msUlt.valor_real, msBase.valor_esperado) - msBase.valor_esperado) 
+                / (msMeta.valor_esperado - msBase.valor_esperado)) * 100, 1)
+            ELSE 0
+        END AS progresso_kr
+    FROM key_results kr
+    OUTER APPLY (
+        SELECT TOP 1 * FROM milestones_kr 
+        WHERE id_kr = kr.id_kr 
+        ORDER BY num_ordem ASC
+    ) msBase
+    OUTER APPLY (
+        SELECT TOP 1 * FROM milestones_kr 
+        WHERE id_kr = kr.id_kr 
+        ORDER BY num_ordem DESC
+    ) msMeta
+    OUTER APPLY (
+        SELECT TOP 1 * FROM milestones_kr 
+        WHERE id_kr = kr.id_kr AND valor_real IS NOT NULL
+        ORDER BY num_ordem DESC
+    ) msUlt
+)
+
 SELECT 
     obj.id_objetivo,
     obj.descricao,
@@ -83,15 +105,9 @@ SELECT
     0 AS orcamento_utilizado,
 
     ISNULL((
-        SELECT AVG(apont.progresso_calc)
-        FROM key_results kr
-        OUTER APPLY (
-            SELECT TOP 1 progresso_calc
-            FROM apontamentos_check_kr
-            WHERE apontamentos_check_kr.id_kr = kr.id_kr
-            ORDER BY data_hora DESC
-        ) AS apont
-        WHERE kr.id_objetivo = obj.id_objetivo
+        SELECT AVG(p.progresso_kr) 
+        FROM ProgressoKR p
+        WHERE p.id_objetivo = obj.id_objetivo
     ), 0) AS progresso
 
 FROM objetivos obj;
@@ -130,6 +146,8 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 }
 ?>
 
+
+
 <div class="content">
     <div class="container my-4">
         <h1 class="mb-5 text-center text-primary fw-bold">
@@ -140,89 +158,93 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $icone = $pilares[$pilar]['icone'] ?? 'bi-diagram-3';
             $cor = $pilares[$pilar]['cor'] ?? '#6c757d';
         ?>
-            <section class="mb-5">
-                <header class="d-flex align-items-center gap-2 mb-4 rounded p-3" style="background-color: <?= $cor ?>;">
-                    <i class="bi <?= $icone ?> fs-3 text-white"></i>
-                    <h2 class="m-0 fs-4 fw-semibold text-white"><?= htmlspecialchars($pilar) ?></h2>
-                </header>
+        <section class="mb-5">
+            <header class="d-flex align-items-center gap-2 mb-4 rounded p-3" style="background-color: <?= $cor ?>;">
+                <i class="bi <?= $icone ?> fs-3 text-white"></i>
+                <h2 class="m-0 fs-4 fw-semibold text-white"><?= htmlspecialchars($pilar) ?></h2>
+            </header>
 
-                <?php if (empty($objetivos)): ?>
-                    <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
-                <?php else: ?>
-                    <div class="row g-4" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
-                        <?php foreach ($objetivos as $obj):
-                            $prazoFormatado = (!empty($obj['prazo']) && $obj['prazo'] instanceof DateTime)
-                                ? $obj['prazo']->format('d/m/Y')
-                                : (is_string($obj['prazo']) ? date('d/m/Y', strtotime($obj['prazo'])) : 'Sem Prazo');
-                        ?>
-                            <article tabindex="0" role="article" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
-                                <header class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="badge 
-                                        <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
-                                        <?= htmlspecialchars($obj['tipo']) ?>
-                                    </span>
-                                    <small class="text-muted fw-semibold">Prazo: <?= $prazoFormatado ?></small>
-                                </header>
+            <?php if (empty($objetivos)): ?>
+                <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
+            <?php else: ?>
+                <div class="row g-4" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
+                    <?php foreach ($objetivos as $obj):
+                        $prazoFormatado = (!empty($obj['prazo']) && $obj['prazo'] instanceof DateTime)
+                            ? $obj['prazo']->format('d/m/Y')
+                            : (is_string($obj['prazo']) ? date('d/m/Y', strtotime($obj['prazo'])) : 'Sem Prazo');
+                    ?>
+                    <article tabindex="0" role="article" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
+                        <header class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge 
+                                <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
+                                <?= htmlspecialchars($obj['tipo']) ?>
+                            </span>
+                            <small class="text-muted fw-semibold">Prazo: <?= $prazoFormatado ?></small>
+                        </header>
 
-                                <h3 class="fs-5 fw-bold text-truncate" title="<?= htmlspecialchars($obj['nome']) ?>">
-                                    <a href="index.php?page=OKR_detalhe_objetivo&id=<?= urlencode($obj['id']) ?>" 
-                                    class="stretched-link text-decoration-none text-dark">
-                                        <?= htmlspecialchars($obj['nome']) ?>
-                                    </a>
-                                </h3>
+                        <h3 class="fs-5 fw-bold text-truncate" title="<?= htmlspecialchars($obj['nome']) ?>">
+                            <a href="index.php?page=OKR_detalhe_objetivo&id=<?= urlencode($obj['id']) ?>" 
+                            class="stretched-link text-decoration-none text-dark">
+                                <?= htmlspecialchars($obj['nome']) ?>
+                            </a>
+                        </h3>
 
-                                <div class="d-flex flex-column gap-2 mt-3 flex-grow-1">
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">Dono</small>
-                                        <strong><?= htmlspecialchars($obj['dono']) ?></strong>
-                                    </div>
+                        <div class="d-flex flex-column gap-2 mt-3 flex-grow-1">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Dono</small>
+                                <strong><?= htmlspecialchars($obj['dono']) ?></strong>
+                            </div>
 
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">Status</small>
-                                        <span class="badge
-                                            <?= $obj['status'] === 'cancelado' ? 'bg-danger' : 'bg-info' ?>">
-                                            <?= ucfirst(str_replace('-', ' ', $obj['status'])) ?>
-                                        </span>
-                                    </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Status</small>
+                                <span class="badge
+                                    <?= $obj['status'] === 'cancelado' ? 'bg-danger' : 'bg-info' ?>">
+                                    <?= ucfirst(str_replace('-', ' ', $obj['status'])) ?>
+                                </span>
+                            </div>
 
-                                    <div>
-                                        <small class="text-muted">KR's</small>
-                                        <div class="progress rounded-pill" style="height: 18px;">
-                                            <div class="progress-bar progress-bar-striped progress-bar-animated
-                                                <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?>"
-                                                role="progressbar" style="width: <?= $obj['progresso'] ?>%"
-                                                aria-valuenow="<?= $obj['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
-                                                <?= $obj['progresso'] ?>%
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">Orçamento</small>
-                                        <strong>R$ <?= number_format($obj['orcamento'], 2, ',', '.') ?></strong>
-                                    </div>
-
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">Utilizado</small>
-                                        <strong>R$ <?= number_format($obj['orcamento_utilizado'], 2, ',', '.') ?></strong>
-                                    </div>
-
-                                    <div class="d-flex justify-content-between align-items-center mt-3">
-                                        <small class="text-muted">Farol de Confiança</small>
-                                        <?php if ($obj['farol'] === 'Alta'): ?>
-                                            <span class="badge bg-success px-3 py-2 fs-6 fw-semibold">Alta</span>
-                                        <?php elseif ($obj['farol'] === 'Média'): ?>
-                                            <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-semibold">Média</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-danger px-3 py-2 fs-6 fw-semibold">Baixa</span>
-                                        <?php endif; ?>
+                            <!-- 🔥 Barra de Progresso do Objetivo -->
+                            <div>
+                                <small class="text-muted">🚀 Progresso do Objetivo</small>
+                                <div class="d-flex justify-content-between">
+                                    <span>0%</span><span>100%</span>
+                                </div>
+                                <div class="progress rounded-pill" style="height: 18px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated
+                                        <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?>"
+                                        role="progressbar" style="width: <?= $obj['progresso'] ?>%"
+                                        aria-valuenow="<?= $obj['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
+                                        <?= $obj['progresso'] ?>%
                                     </div>
                                 </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </section>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Orçamento</small>
+                                <strong>R$ <?= number_format($obj['orcamento'], 2, ',', '.') ?></strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Utilizado</small>
+                                <strong>R$ <?= number_format($obj['orcamento_utilizado'], 2, ',', '.') ?></strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <small class="text-muted">Farol de Confiança</small>
+                                <?php if ($obj['farol'] === 'Alta'): ?>
+                                    <span class="badge bg-success px-3 py-2 fs-6 fw-semibold">Alta</span>
+                                <?php elseif ($obj['farol'] === 'Média'): ?>
+                                    <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-semibold">Média</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger px-3 py-2 fs-6 fw-semibold">Baixa</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
         <?php endforeach; ?>
     </div>
 </div>
