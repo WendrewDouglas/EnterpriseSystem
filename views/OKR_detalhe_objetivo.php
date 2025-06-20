@@ -41,17 +41,24 @@ if (!$objetivo) {
     die("<div class='alert alert-danger'>Objetivo não encontrado.</div>");
 }
 
-// 🔍 Carregar KRs, Milestones, Iniciativas e Orçamentos
+// 🔍 Carregar KRs
 $sqlKRs   = "SELECT * FROM key_results WHERE id_objetivo = ?";
 $stmtKRs  = sqlsrv_query($connOKR, $sqlKRs, [$idObjetivo]);
 
 $krs              = [];
 $milestonesPorKR  = [];
 $iniciativasPorKR = [];
+$custosPorIniciativa = [];
 $progressoTotal   = 0;
 
 while ($kr = sqlsrv_fetch_array($stmtKRs, SQLSRV_FETCH_ASSOC)) {
+
+  // 🔧 Inicializa os campos para evitar erros caso não existam milestones
     $kr['progresso'] = 0;
+    $kr['ms_atual'] = null;
+    $kr['ultimo_valor'] = null;
+    $kr['ultima_data'] = null;
+
 
     // 🔍 Buscar Milestones deste KR
     $sqlMS = <<<'SQL'
@@ -69,6 +76,7 @@ FROM milestones_kr
 WHERE id_kr = ?
 ORDER BY num_ordem
 SQL;
+
     $stmtMS = sqlsrv_query($connOKR, $sqlMS, [$kr['id_kr']]);
     $listaMS = [];
     while ($ms = sqlsrv_fetch_array($stmtMS, SQLSRV_FETCH_ASSOC)) {
@@ -83,6 +91,41 @@ SQL;
             'dt_apontamento' => $ms['dt_apontamento'],
         ];
     }
+
+    // 🔥 Definir cor da barra de progresso
+    $corBarraProgresso = '#6c757d'; // Cinza padrão
+
+    if (count($listaMS) > 0) {
+        $baseline = $listaMS[0]['valor_esperado'];
+        $meta     = $listaMS[count($listaMS) - 1]['valor_esperado'];
+
+        // Último milestone com valor_real preenchido
+        $ultimoMs = null;
+        foreach (array_reverse($listaMS) as $ms) {
+            if ($ms['valor_real'] !== null) {
+                $ultimoMs = $ms;
+                break;
+            }
+        }
+
+        // Direção (parametrizar no futuro se quiser)
+        $direcao = 'maior'; // maior, menor, intervalo
+
+        if ($ultimoMs) {
+            $real = $ultimoMs['valor_real'];
+            $esperado = $ultimoMs['valor_esperado'];
+
+            if ($direcao === 'maior') {
+                $corBarraProgresso = $real >= $esperado ? '#198754' : '#c94444';
+            } elseif ($direcao === 'menor') {
+                $corBarraProgresso = $real <= $esperado ? '#198754' : '#c94444';
+            } elseif ($direcao === 'intervalo') {
+                $corBarraProgresso = ($real >= $baseline && $real <= $meta) ? '#198754' : '#c94444';
+            }
+        }
+    }
+
+    $kr['cor_progresso'] = $corBarraProgresso;
 
     // ↘ Cálculo de baseline, meta e progresso do KR
     if (count($listaMS) > 0) {
@@ -162,6 +205,24 @@ SQL;
         $valorOrcado = floatval($orcamento['valor_orcado']);
         $valorRealizado = floatval($orcamento['valor_realizado']);
 
+        // 🔍 Buscar custos detalhados
+        $sqlCustos = "SELECT * FROM orcamento_custos_detalhados WHERE id_iniciativa = ?";
+        $stmtCustos = sqlsrv_query($connOKR, $sqlCustos, [$idIniciativa]);
+        $listaCustos = [];
+        while ($ct = sqlsrv_fetch_array($stmtCustos, SQLSRV_FETCH_ASSOC)) {
+            $listaCustos[] = [
+                'id_custo'         => $ct['id_custo'],
+                'id_orcamento'     => $ct['id_orcamento'],
+                'id_iniciativa'    => $ct['id_iniciativa'],
+                'data_desembolso'  => isset($ct['data_desembolso']) ? date_format($ct['data_desembolso'], 'd/m/Y') : '-',
+                'valor'            => floatval($ct['valor']),
+                'descricao'        => $ct['descricao'] ?? '',
+                'caminho_evidencia'=> $ct['caminho_evidencia'] ?? '',
+                'id_user_criador'  => $ct['id_user_criador'] ?? '',
+                'dt_criacao'       => isset($ct['dt_criacao']) ? date_format($ct['dt_criacao'], 'd/m/Y') : '-'
+            ];
+        }
+
         // Soma para orçamento do KR
         $orcamentoKR += $valorOrcado;
         $realizadoKR += $valorRealizado;
@@ -178,8 +239,11 @@ SQL;
             'prazo'         => $prazoFormatado,
             'prazo_data'    => $prazo,
             'valor_orcado'  => $valorOrcado,
-            'valor_realizado' => $valorRealizado,
+            'valor_realizado' => $valorRealizado
         ];
+
+        // 🔗 Adiciona os custos detalhados na estrutura
+        $custosPorIniciativa[$idIniciativa] = $listaCustos;
     }
 
     $iniciativasPorKR[$key] = $listaIni;
@@ -212,6 +276,8 @@ include __DIR__ . '/../templates/sidebar.php';
 
 
 
+
+<!-- 🔥 Cabeçalho da Página -->
 <div class="content">
     <div class="container my-4">
         <h1 class="mb-4 fw-bold text-primary">
@@ -269,7 +335,7 @@ include __DIR__ . '/../templates/sidebar.php';
                     <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?= $krId ?>">▼</button>
                 </div>
 
-                <!-- Barra de progresso do KR sempre visível -->
+                <!-- Barra de progresso do KR -->
                 <div class="mt-3 px-3 pb-2 d-flex align-items-center gap-2">
                     <label class="mb-0 fw-semibold" style="min-width: 150px;">🚀 Progresso do KR:</label>
                     <div class="flex-grow-1">
@@ -277,13 +343,15 @@ include __DIR__ . '/../templates/sidebar.php';
                             <span>0%</span><span>100%</span>
                         </div>
                         <div class="progress rounded-pill" style="height: 14px;">
-                            <div class="progress-bar bg-success progress-bar-striped" style="width: <?= $kr['progresso'] ?>%;">
+                            <div class="progress-bar progress-bar-striped" 
+                                style="width: <?= $kr['progresso'] ?>%; background-color: <?= $kr['cor_progresso'] ?>;">
                                 <?= $kr['progresso'] ?>%
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Conteúdo detalhado -->
                 <div class="collapse" id="details-<?= $krId ?>">
                     <div class="p-3 border-top">
                         <div class="row">
@@ -304,15 +372,13 @@ include __DIR__ . '/../templates/sidebar.php';
                                     <?= !empty($kr['observacoes']) ? $kr['observacoes'] : '-' ?>
                                 </p>
 
-                                <!-- Botão Apontar Progresso -->
-                                <button
-                                    class="btn btn-outline-primary btn-sm mt-2"
+                                <!-- Botões -->
+                                <button class="btn btn-outline-primary btn-sm mt-2"
                                     onclick="abrirModalApontamento(
                                         '<?= $krId ?>',
                                         '<?= $kr['id_kr'] ?>',
                                         <?= isset($kr['ms_atual']) ? $kr['ms_atual'] : 'null' ?>
-                                    )"
-                                >
+                                    )">
                                     📈 Apontar Progresso
                                 </button>
                             </div>
@@ -356,14 +422,17 @@ include __DIR__ . '/../templates/sidebar.php';
                                                     <div class="text-end">
                                                         <select 
                                                             class="form-select form-select-sm"
-                                                            onchange="alterarStatusIniciativa('<?= $ini['id_iniciativa'] ?>', this.value)"
-                                                        >
+                                                            onchange="alterarStatusIniciativa('<?= $ini['id_iniciativa'] ?>', this.value)">
                                                             <?php foreach (['nao iniciado', 'em andamento', 'concluido', 'cancelado'] as $statusOpt): ?>
                                                                 <option value="<?= $statusOpt ?>" <?= $ini['status'] === $statusOpt ? 'selected' : '' ?>>
                                                                     <?= ucfirst($statusOpt) ?>
                                                                 </option>
                                                             <?php endforeach; ?>
                                                         </select>
+                                                        <button class="btn btn-sm btn-outline-info mt-2"
+                                                            onclick="abrirModalCustos('<?= $ini['id_iniciativa'] ?>', '<?= htmlspecialchars($ini['descricao']) ?>')">
+                                                            💰 Custos
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -392,7 +461,6 @@ include __DIR__ . '/../templates/sidebar.php';
     </div>
 </div>
 
-
 <!-- Modal Apontamento de Progresso -->
 <div class="modal fade" id="modalApontamento" tabindex="-1" aria-labelledby="modalApontamentoLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -407,6 +475,26 @@ include __DIR__ . '/../templates/sidebar.php';
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-success" id="btnSalvarApontamento">✔️ Enviar Atualização</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Custos -->
+<div class="modal fade" id="modalCustos" tabindex="-1" aria-labelledby="modalCustosLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="modalCustosLabel">💰 Apontamento de Custos</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <h6 id="subTituloCustos"></h6>
+        <div id="tabelaCustos"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="btnSalvarCustos">✔️ Registrar Custo</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Fechar</button>
       </div>
     </div>
@@ -444,22 +532,69 @@ document.addEventListener('DOMContentLoaded', () => {
       const esperado = data.map(m => m.valor_esperado);
       const realizado = data.map(m => m.valor_real ?? null);
 
-      new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Projeção', data: esperado, tension: 0.3, pointRadius: 4 },
-            { label: 'Realizado', data: realizado, tension: 0.3, pointRadius: 4 }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } },
-          scales: { y: { beginAtZero: true } }
+      // 🔍 Pegando baseline e meta
+      const baseline = esperado[0];
+      const meta = esperado[esperado.length - 1];
+
+      // 🔍 Último milestone com valor_real
+      const ultimoMsIndex = [...data].reverse().findIndex(m => m.valor_real !== null);
+      const ultimoIndex = ultimoMsIndex !== -1 ? (data.length - 1 - ultimoMsIndex) : null;
+      const ultimoMs = ultimoIndex !== null ? data[ultimoIndex] : null;
+
+      // 🔍 Definindo direção (idealmente trazer do backend)
+      const direcao = 'maior'; // 'maior', 'menor' ou 'intervalo'
+
+      // 🔥 Definindo cor da linha com base no milestone específico
+      let corLinha = 'gray'; // padrão sem dados
+
+      if (ultimoMs) {
+        const real = ultimoMs.valor_real;
+        const esperadoMs = ultimoMs.valor_esperado;
+
+        if (direcao === 'maior') {
+          corLinha = real >= esperadoMs ? 'green' : 'red';
+        } else if (direcao === 'menor') {
+          corLinha = real <= esperadoMs ? 'green' : 'red';
+        } else if (direcao === 'intervalo') {
+          corLinha = (real >= baseline && real <= meta) ? 'green' : 'red';
         }
-      });
+      }
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Projeção',
+            data: esperado,
+            tension: 0.3,
+            pointRadius: 4,
+            borderColor: '#6fa8dc',    // Azul claro
+            backgroundColor: '#6fa8dc'
+          },
+          {
+            label: 'Realizado',
+            data: realizado,
+            tension: 0.3,
+            pointRadius: 4,
+            borderColor: corLinha === 'green' ? '#82c291' :
+                        corLinha === 'red'   ? '#d96b6b' :
+                        '#bfbfbf', // cinza caso sem dados
+            backgroundColor: corLinha === 'green' ? '#82c291' :
+                            corLinha === 'red'   ? '#d96b6b' :
+                            '#bfbfbf',
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
 
       renderedCharts[krId] = true;
     });
@@ -635,6 +770,106 @@ document.getElementById('btnSalvarApontamento').addEventListener('click', () => 
     alert(`❌ Erro de rede ou servidor: ${err.message}`);
   });
 });
+
+// === Abrir Modal de Custos ===
+function abrirModalCustos(idIniciativa, nomeIniciativa) {
+  const container = document.getElementById('tabelaCustos');
+  const subTitulo = document.getElementById('subTituloCustos');
+  subTitulo.innerHTML = `Iniciativa: <strong>${nomeIniciativa}</strong>`;
+
+  const custos = <?= json_encode($custosPorIniciativa) ?>;
+  const dados = custos[idIniciativa] || [];
+
+  let tabela = `<div class="table-responsive">
+    <table class="table table-bordered table-sm tabela-custos">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Valor (R$)</th>
+          <th>Descrição</th>
+          <th>Evidência</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  if (dados.length === 0) {
+    tabela += `<tr><td colspan="4">Nenhum custo lançado.</td></tr>`;
+  } else {
+    dados.forEach(c => {
+      tabela += `<tr>
+        <td>${c.data_desembolso}</td>
+        <td>R$ ${c.valor.toFixed(2)}</td>
+        <td>${c.descricao}</td>
+        <td>
+          ${c.caminho_evidencia ? `<a href="${c.caminho_evidencia}" target="_blank">📎 Ver Anexo</a>` : '-'}
+        </td>
+      </tr>`;
+    });
+  }
+
+  tabela += `
+      <tr class="table-success">
+        <td><input type="date" class="form-control form-control-sm" id="custo_data"></td>
+        <td><input type="number" step="0.01" class="form-control form-control-sm" id="custo_valor"></td>
+        <td><input type="text" class="form-control form-control-sm" id="custo_desc" placeholder="Descrição"></td>
+        <td>
+          <input type="file" class="form-control form-control-sm" id="custo_file" accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx">
+        </td>
+      </tr>
+    </tbody></table></div>`;
+
+  container.innerHTML = tabela;
+
+  // Armazena a iniciativa ativa para o botão salvar
+  container.setAttribute('data-id-iniciativa', idIniciativa);
+
+  // Abre o modal
+  new bootstrap.Modal(document.getElementById('modalCustos')).show();
+}
+
+// === Salvar Custo ===
+document.getElementById('btnSalvarCustos').addEventListener('click', () => {
+  const container = document.getElementById('tabelaCustos');
+  const idIniciativa = container.getAttribute('data-id-iniciativa');
+
+  const data = document.getElementById('custo_data').value;
+  const valor = parseFloat(document.getElementById('custo_valor').value);
+  const descricao = document.getElementById('custo_desc').value;
+  const file = document.getElementById('custo_file').files[0];
+
+  if (!data || isNaN(valor)) {
+    alert('⚠️ Preencha data e valor.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('id_iniciativa', idIniciativa);
+  formData.append('data_desembolso', data);
+  formData.append('valor', valor);
+  formData.append('descricao', descricao);
+  if (file) {
+    formData.append('anexo', file);
+  }
+
+  fetch('../views/OKR_salvar_custo.php', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(resp => {
+    if (resp.status === 'sucesso') {
+      alert(`✔️ ${resp.mensagem}`);
+      location.reload();
+    } else {
+      alert(`❌ ${resp.mensagem}`);
+    }
+  })
+  .catch(err => {
+    console.error('Erro no salvamento de custo:', err);
+    alert('❌ Erro na comunicação com o servidor.');
+  });
+});
+
 </script>
 
 <style>
@@ -665,7 +900,7 @@ document.getElementById('btnSalvarApontamento').addEventListener('click', () => 
   overflow-x: auto;
 }
 
-/* Inputs */
+/* Inputs padrão */
 input[type="number"] {
   width: 100px;
 }
@@ -675,6 +910,15 @@ input[type="date"] {
 textarea {
   width: 100%;
   resize: none;
+}
+
+/* Estilo específico para campo de anexo */
+input[type="file"] {
+  width: 100%;
+}
+input[type="text"].anexo-descricao {
+  width: 100%;
+  margin-top: 4px;
 }
 
 /* Gráfico responsivo */
@@ -700,7 +944,30 @@ textarea {
   display: flex;
   flex-direction: column;
 }
+
+/* ===== Estilo adicional para controle de custos futuros (ajuste opcional) ===== */
+.tabela-custos th,
+.tabela-custos td {
+  padding: 6px;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid #dee2e6;
+}
+.tabela-custos {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tabela-custos thead {
+  background-color: #f1f1f1;
+}
+.custo-realizado {
+  background-color: #e8f7e4;
+}
+.custo-planejado {
+  background-color: #fef9e7;
+}
 </style>
+
 
 
 
