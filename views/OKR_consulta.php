@@ -183,6 +183,20 @@ foreach ($pilares as $id_pilar => $info) {
     ];
 }
 
+// 🔢 Calcular métricas globais
+$total_objetivos = array_sum(array_column($pilaresMetrica, 'qtd_objetivos'));
+$total_krs = array_sum(array_column($pilaresMetrica, 'qtd_krs'));
+
+$progresso_global = count($pilaresMetrica) ? 
+    round(array_sum(array_column($pilaresMetrica, 'progresso_geral')) / count($pilaresMetrica), 1) : 0;
+
+$krs_atingidos_global = $total_krs ? 
+    round(array_sum(array_map(fn($p)=>$p['perc_krs_atingidos'], $pilaresMetrica)) / count($pilaresMetrica), 1) : 0;
+
+$krs_risco_global = $total_krs ? 
+    round(array_sum(array_map(fn($p)=>$p['perc_krs_risco'], $pilaresMetrica)) / count($pilaresMetrica), 1) : 0;
+
+
 ?>
 
 
@@ -192,6 +206,68 @@ foreach ($pilares as $id_pilar => $info) {
         <h1 class="mb-5 text-left text-primary fw-bold">
             <i class="bi bi-diagram-3 me-2"></i>Consulta de OKRs - Pilares e Objetivos
         </h1>
+
+        <!-- 🔥 Bloco de Cabeçalho Institucional -->
+        <div class="container-xxl mb-4">
+            <div class="row g-4">
+
+                <!-- Missão -->
+                <div class="col-md-6">
+                    <div class="h-100 border rounded p-4 bg-white shadow-sm">
+                        <h5 class="fw-bold text-primary mb-2">
+                            <i class="bi bi-flag me-2"></i>Missão
+                        </h5>
+                        <p class="mb-0">
+                            Facilitar a vida das pessoas, oferecendo produtos acessíveis, com qualidade e sustentabilidade.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Visão -->
+                <div class="col-md-6">
+                    <div class="h-100 border rounded p-4 bg-white shadow-sm">
+                        <h5 class="fw-bold text-success mb-2">
+                            <i class="bi bi-eye me-2"></i>Visão
+                        </h5>
+                        <p class="mb-0">
+                            Ser referência em custo-benefício, presente na maior parte dos lares brasileiros, com expansão no mercado internacional.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 🔥 Métricas Globais -->
+                <div class="col-12">
+                    <div class="h-100 border rounded p-4 bg-white shadow-sm">
+                        <h5 class="fw-bold mb-3 text-dark">
+                            <i class="bi bi-graph-up-arrow me-2"></i>Resumo Geral dos OKRs
+                        </h5>
+                        <div class="row text-center g-4">
+                            <div class="col">
+                                <h1 class="text-primary"><?= $total_objetivos ?></h1>
+                                <div class="small">Objetivos</div>
+                            </div>
+                            <div class="col">
+                                <h1 class="text-success"><?= $total_krs ?></h1>
+                                <div class="small">Key Results</div>
+                            </div>
+                            <div class="col">
+                                <h1 class="text-warning"><?= $progresso_global ?>%</h1>
+                                <div class="small">Progresso Geral</div>
+                            </div>
+                            <div class="col">
+                                <h1 class="text-info"><?= $krs_atingidos_global ?>%</h1>
+                                <div class="small">KRs Atingidos</div>
+                            </div>
+                            <div class="col">
+                                <h1 class="text-danger"><?= $krs_risco_global ?>%</h1>
+                                <div class="small">KRs em Risco</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
         <div class="kanban-board">
             <?php foreach ($pilares as $id_pilar => $info):
@@ -263,18 +339,51 @@ foreach ($pilares as $id_pilar => $info) {
                             </div>
 
                             <div>
+                                <?php
+                                    $farol = strtolower(removerAcentos($obj['farol']));
+                                    if ($farol === 'otimo') {
+                                        $badge = 'bg-purple';
+                                        $label = 'Ótimo';
+                                        $corBarra = 'bg-purple';
+                                    } elseif ($farol === 'bom') {
+                                        $badge = 'bg-success';
+                                        $label = 'Bom';
+                                        $corBarra = 'bg-success';
+                                    } elseif ($farol === 'moderado') {
+                                        $badge = 'bg-warning text-dark';
+                                        $label = 'Moderado';
+                                        $corBarra = 'bg-warning text-dark';
+                                    } elseif ($farol === 'ruim') {
+                                        $badge = 'bg-orange text-dark';
+                                        $label = 'Ruim';
+                                        $corBarra = 'bg-orange text-dark';
+                                    } elseif ($farol === 'pessimo') {
+                                        $badge = 'bg-dark';
+                                        $label = 'Péssimo';
+                                        $corBarra = 'bg-dark';
+                                    } else {
+                                        $badge = 'bg-secondary';
+                                        $label = '-';
+                                        $corBarra = 'bg-secondary';
+                                    }
+                                ?>
+
                                 <small class="text-muted">🚀 Progresso do Objetivo</small>
                                 <div class="d-flex justify-content-between">
                                     <span>0%</span><span>100%</span>
                                 </div>
                                 <div class="progress rounded-pill" style="height: 18px;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?>"
-                                        role="progressbar" style="width: <?= $obj['progresso'] ?>%"
-                                        aria-valuenow="<?= $obj['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated <?= $corBarra ?>"
+                                        role="progressbar"
+                                        style="width: <?= $obj['progresso'] ?>%"
+                                        aria-valuenow="<?= $obj['progresso'] ?>"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100">
                                         <?= $obj['progresso'] ?>%
                                     </div>
                                 </div>
                             </div>
+
 
                             <div class="d-flex justify-content-between">
                                 <small class="text-muted">Orçamento</small>
@@ -327,166 +436,202 @@ foreach ($pilares as $id_pilar => $info) {
 
 
 <style>
+/* === 🎯 Card de Objetivo === */
 .objetivo-card {
     border: 1px solid #ddd;
     border-radius: 10px;
     background: #fff;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    padding: 1.5rem;
+    padding: 1.2rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 360px;
+    min-height: 340px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
 }
 
 .objetivo-card:hover,
 .objetivo-card:focus-visible {
-    transform: scale(1.04);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    transform: scale(1.03);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     outline: none;
     z-index: 10;
 }
 
+
+/* === 🔠 Tipografia === */
 h1, h2, h3 {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.badge {
+    font-size: 0.85rem;
+    padding: 0.35em 0.75em;
+    border-radius: 0.375rem;
+}
+
+
+/* === 📊 Barra de Progresso === */
+.progress {
+    background-color: #f0f0f0;
+}
+.progress-bar {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* === 📋 Layout Kanban === */
+.kanban-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.kanban-board {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    width: 100%;
+    align-items: flex-start;
+}
+
+.kanban-column {
+    background: #f7f7fb;
+    border-radius: 12px;
+    flex: 1 1 calc(25% - 1rem);
+    min-width: 280px;
+    margin-bottom: 10px;
+    box-shadow: 0 3px 20px rgba(60,60,90,0.06);
+    padding: 0.7rem 0.8rem 1rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 520px;
+}
+
+.kanban-column header {
+    border-radius: 10px;
+    padding: 0.8rem;
+    margin-bottom: 8px;
+}
+
+.kanban-column .objetivo-card {
+    margin-bottom: 0.6rem;
+}
+
+
+/* === 🔧 Responsividade === */
+@media (max-width: 1200px) {
+    .kanban-column {
+        flex: 1 1 calc(33.33% - 1rem);
+    }
+}
+
+@media (max-width: 992px) {
+    .kanban-column {
+        flex: 1 1 calc(50% - 1rem);
+    }
+}
+
+@media (max-width: 576px) {
+    .kanban-board {
+        flex-direction: column;
+    }
+    .kanban-column {
+        flex: 1 1 100%;
+        min-width: unset;
+        min-height: 380px;
+    }
+    .objetivo-card {
+        min-height: 360px;
+        padding: 1rem;
+    }
+}
+
+
+/* === 🚥 Farol de Confiança === */
+.farol-wrapper,
+.farol-alinhado-direita {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+}
+
+
+/* === 🗂️ Componentes Card === */
+.card h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+.card h5 {
+    letter-spacing: 0.5px;
+}
+.card .small {
+    color: #555;
+}
+
+
+/* === 🏗️ Container === */
+.container-xxl {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 1rem;
+    margin: 0;
+}
+
+
+/* === 🌗 Sombras === */
+.shadow-sm {
+    box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+}
+
+
+/* === 🎨 Cores do Farol === */
+.bg-purple {
+    background-color: #6f42c1 !important;
+    color: #fff !important;
+}
+.bg-success {
+    background-color: #198754 !important;
+    color: #fff !important;
+}
+.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+.bg-orange {
+    background-color: #fd7e14 !important;
+    color: #fff !important;
+}
+.bg-dark {
+    background-color: #212529 !important;
+    color: #fff !important;
+}
+.bg-secondary {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
+
+/* === 🔔 Diversos === */
+.alert-light {
+    font-size: 1rem;
+}
 .text-truncate {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.badge {
-    font-size: 0.9rem;
-    padding: 0.4em 0.8em;
-    border-radius: 0.375rem;
+.bg-white {
+    background-color: #fff !important;
 }
-
-.progress {
-    background-color: #f0f0f0;
-}
-
-.progress-bar {
-    font-weight: 600;
-}
-
-section > header {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    letter-spacing: 0.02em;
-}
-
-.alert-light {
-    font-size: 1rem;
-}
-
-@media (max-width: 576px) {
-    .objetivo-card {
-        min-height: 380px;
-        padding: 1rem;
-    }
-}
-
-.kanban-board {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: nowrap;
-    align-items: flex-start;
-    min-height: 500px;
-    overflow-x: auto;
-}
-.kanban-column {
-    background: #f7f7fb;
-    border-radius: 12px;
-    min-width: 320px;
-    max-width: 370px;
-    flex: 1 1 0;
-    margin-bottom: 16px;
-    box-shadow: 0 3px 20px rgba(60,60,90,0.06);
-    padding: 0.5rem 0.7rem 1.3rem 0.7rem;
-    display: flex;
-    flex-direction: column;
-    min-height: 570px;
-    /* Fixar altura mínima pro quadro ficar bonito */
-}
-.kanban-column header {
-    margin-bottom: 12px;
-}
-.kanban-column .objetivo-card {
-    margin-bottom: 1.1rem;
-}
-
-@media (max-width: 991px) {
-    .kanban-board {
-        flex-direction: column;
-        gap: 2.2rem;
-    }
-    .kanban-column {
-        max-width: 100%;
-        min-width: unset;
-        min-height: 360px;
-    }
-}
-
-.kanban-container {
-    width: 100vw;
-    max-width: 100vw;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    /* Para quem usa sidebar fixa do Bootstrap, pode precisar ajustar margin-left */
-    /* margin-left: 260px;  Descomente e ajuste se necessário para seu layout */
-}
-.kanban-board {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100%;
-}
-
-.bg-purple {
-    background-color: #6f42c1 !important;
-    color: #fff;
-}
-
-.bg-orange {
-    background-color: #fd7e14 !important;
-    color: #fff;
-}
-
-.bg-dark {
-    background-color: #000 !important;
-    color: #fff;
-}
-
-.farol-alinhado-direita {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-}
-
-.farol-wrapper {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    width: 100%;
-}
-
-.bg-purple {
-    background-color: #6f42c1 !important;
-    color: #fff;
-}
-
-.bg-orange {
-    background-color: #fd7e14 !important;
-    color: #fff;
-}
-
-.bg-dark {
-    background-color: #000 !important;
-    color: #fff;
+.bg-light {
+    background-color: #f8f9fa !important;
 }
 
 </style>

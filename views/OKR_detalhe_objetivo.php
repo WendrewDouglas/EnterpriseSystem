@@ -30,6 +30,24 @@ if (!$connForecast || !$connOKR) {
     die("<div class='alert alert-danger'>Erro de conexão com os bancos.</div>");
 }
 
+function removerAcentos($texto) {
+    $mapa = [
+        'á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a',
+        'Á'=>'A','À'=>'A','Ã'=>'A','Â'=>'A','Ä'=>'A',
+        'é'=>'e','è'=>'e','ê'=>'e','ë'=>'e',
+        'É'=>'E','È'=>'E','Ê'=>'E','Ë'=>'E',
+        'í'=>'i','ì'=>'i','î'=>'i','ï'=>'i',
+        'Í'=>'I','Ì'=>'I','Î'=>'I','Ï'=>'I',
+        'ó'=>'o','ò'=>'o','õ'=>'o','ô'=>'o','ö'=>'o',
+        'Ó'=>'O','Ò'=>'O','Õ'=>'O','Ô'=>'O','Ö'=>'O',
+        'ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u',
+        'Ú'=>'U','Ù'=>'U','Û'=>'U','Ü'=>'U',
+        'ç'=>'c','Ç'=>'C'
+    ];
+    return strtr($texto, $mapa);
+}
+
+
 // 📦 Identificador do Objetivo
 $idObjetivo = $_GET['id'] ?? '';
 if (empty($idObjetivo)) {
@@ -346,6 +364,40 @@ $mediaProgresso = count($krs) > 0
     ? round($progressoTotal / count($krs), 1)
     : 0;
 
+// 🔥 Definir o farol do objetivo com base no pior farol dos KRs
+$coresFarol = [
+    'pessimo'  => 'bg-black',
+    'ruim'     => 'bg-danger',
+    'moderado' => 'bg-warning text-dark',
+    'bom'      => 'bg-success',
+    'otimo'    => 'bg-purple',
+    '-'        => 'bg-secondary'
+];
+
+$ordemFarol = [
+    'pessimo'  => 1,
+    'ruim'     => 2,
+    'moderado' => 3,
+    'bom'      => 4,
+    'otimo'    => 5,
+    '-'        => 6
+];
+
+$piorFarol = '-';
+
+foreach ($krs as $kr) {
+    $farolAtual = strtolower(removerAcentos($kr['farol_confianca']));
+    if (!isset($ordemFarol[$farolAtual])) {
+        $farolAtual = '-';
+    }
+    if ($piorFarol === '-' || $ordemFarol[$farolAtual] < $ordemFarol[$piorFarol]) {
+        $piorFarol = $farolAtual;
+    }
+}
+
+$corFarolObjetivo = $coresFarol[$piorFarol];
+
+
 // 🧩 Preparar dados para o front-end
 $jsMilestones = json_encode($milestonesPorKR, JSON_PRETTY_PRINT);
 
@@ -362,196 +414,202 @@ include __DIR__ . '/../templates/sidebar.php';
 
 <!-- 🔥 Cabeçalho da Página -->
 <div class="content">
-    <?php if (!empty($mensagemSistema)): ?>
-      <div class="mb-3">
-          <?= $mensagemSistema ?>
-      </div>
-  <?php endif; ?>
-    <div class="container my-4">
-        <h1 class="mb-4 fw-bold text-primary">
-            <i class="bi bi-bullseye me-2"></i>Detalhe do Objetivo
-        </h1>
+        <div class="container-fluid my-4 px-0">
+        <?php if (!empty($mensagemSistema)): ?>
+          <div class="mb-3">
+              <?= $mensagemSistema ?>
+          </div>
+        <?php endif; ?>
+          <h1 class="mb-4 fw-bold text-primary">
+              <i class="bi bi-bullseye me-2"></i>Detalhe do Objetivo
+          </h1>
 
-        <!-- 🔥 Cabeçalho do Objetivo -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body position-relative">
-                <h3 class="fw-bold text-primary mb-2">🎯 <?= htmlspecialchars($objetivo['descricao']) ?></h3>
-                <p class="text-muted">
-                    🆔 <strong><?= htmlspecialchars($objetivo['id_objetivo']) ?></strong> |
-                    🧭 Pilar: <span class="badge bg-dark"><?= ucfirst($objetivo['pilar_bsc']) ?></span> |
-                    📊 Tipo: 
-                    <span class="badge <?= $objetivo['tipo'] === 'estrategico' ? 'bg-primary' : ($objetivo['tipo'] === 'tatico' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
-                        <?= ucfirst($objetivo['tipo']) ?>
-                    </span> |
-                    🗂️ <strong><?= count($krs) ?> KRs</strong>
-                </p>
+          <!-- 🔥 Cabeçalho do Objetivo -->
+          <div class="card mb-4 shadow-sm">
+              <div class="card-body position-relative">
+                  <h3 class="fw-bold text-primary mb-2">🎯 <?= htmlspecialchars($objetivo['descricao']) ?></h3>
+                  <p class="text-muted">
+                      🆔 <strong><?= htmlspecialchars($objetivo['id_objetivo']) ?></strong> |
+                      🧭 Pilar: <span class="badge bg-dark"><?= ucfirst($objetivo['pilar_bsc']) ?></span> |
+                      📊 Tipo: 
+                      <span class="badge <?= $objetivo['tipo'] === 'estrategico' ? 'bg-primary' : ($objetivo['tipo'] === 'tatico' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
+                          <?= ucfirst($objetivo['tipo']) ?>
+                      </span> |
+                      🗂️ <strong><?= count($krs) ?> KRs</strong>
+                  </p>
 
-                <!-- 🔧 Botão Editar -->
-                <a href="/forecast/views/OKR_editar_objetivo.php?id=<?= urlencode($objetivo['id_objetivo']) ?>"
-                  class="btn btn-outline-primary btn-sm fw-bold position-absolute top-0 end-0 m-3 shadow-sm">
-                  <i class="bi bi-pencil-square me-1"></i> Editar Objetivo
-                </a>
+                  <!-- 🔧 Botão Editar -->
+                  <a href="/forecast/views/OKR_editar_objetivo.php?id=<?= urlencode($objetivo['id_objetivo']) ?>"
+                    class="btn btn-outline-primary btn-sm fw-bold position-absolute top-0 end-0 m-3 shadow-sm">
+                    <i class="bi bi-pencil-square me-1"></i> Editar Objetivo
+                  </a>
 
-                <div>
-                    <label><strong>🚀 Progresso do Objetivo</strong></label>
-                    <div class="d-flex justify-content-between">
-                        <span>0%</span><span>100%</span>
-                    </div>
-                    <div class="progress rounded-pill" style="height: 20px;">
-                        <div class="progress-bar bg-success progress-bar-striped" style="width: <?= $mediaProgresso ?>%;">
-                            <?= $mediaProgresso ?>%
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                  <div>
+                      <label><strong>🚀 Progresso do Objetivo</strong></label>
+                      <div class="d-flex justify-content-between">
+                          <span>0%</span><span>100%</span>
+                      </div>
+                      <div class="progress rounded-pill" style="height: 20px;">
+                          <div class="progress-bar progress-bar-striped progress-bar-animated <?= $corFarolObjetivo ?>"
+                              role="progressbar"
+                              style="width: <?= $mediaProgresso ?>%;"
+                              aria-valuenow="<?= $mediaProgresso ?>" aria-valuemin="0" aria-valuemax="100">
+                              <?= $mediaProgresso ?>%
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
 
-        <!-- 📈 Lista de KRs -->
-        <?php foreach ($krs as $kr): ?>
-            <?php $krId = str_replace(['/', ' '], '_', $kr['id_kr']); ?>
-        <div class="card mb-3 shadow-sm">
-            <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge bg-<?= $kr['status'] === 'concluido' ? 'success' : 'secondary' ?>">
-                            <?= htmlspecialchars($kr['status']) ?>
-                        </span>
-                        <strong class="ms-2"><?= htmlspecialchars($kr['descricao']) ?></strong>
-                          <span class="badge <?= $kr['cor_farol_confianca'] ?> ms-2">
-                              Farol Confiança: <?= htmlspecialchars($kr['farol_confianca'] ?? '-') ?>
+          <!-- 📈 Lista de KRs -->
+          <?php foreach ($krs as $kr): ?>
+              <?php $krId = str_replace(['/', ' '], '_', $kr['id_kr']); ?>
+          <div class="card mb-3 shadow-sm">
+              <div class="card-body d-flex flex-column">
+                  <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                          <span class="badge bg-<?= $kr['status'] === 'concluido' ? 'success' : 'secondary' ?>">
+                              <?= htmlspecialchars($kr['status']) ?>
                           </span>
-                        <?php if (!empty($kr['ms_atual'])): ?>
-                            <span class="ms-3 text-success">
-                                ✓ Milestone Atual: 
-                                <?= $kr['ms_atual'] ?> de <?= count($milestonesPorKR[$krId]) ?>
+                          <strong class="ms-2"><?= htmlspecialchars($kr['descricao']) ?></strong>
+                            <span class="badge <?= $kr['cor_farol_confianca'] ?> ms-2">
+                                Farol Confiança: <?= htmlspecialchars($kr['farol_confianca'] ?? '-') ?>
                             </span>
-                        <?php endif; ?>
-                    </div>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?= $krId ?>">▼</button>
-                </div>
+                          <?php if (!empty($kr['ms_atual'])): ?>
+                              <span class="ms-3 text-success">
+                                  ✓ Milestone Atual: 
+                                  <?= $kr['ms_atual'] ?> de <?= count($milestonesPorKR[$krId]) ?>
+                              </span>
+                          <?php endif; ?>
+                      </div>
+                      <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-<?= $krId ?>">▼</button>
+                  </div>
 
-                <!-- Barra de progresso do KR -->
-                <div class="mt-3 px-3 pb-2 d-flex align-items-center gap-2">
-                    <label class="mb-0 fw-semibold" style="min-width: 150px;">🚀 Progresso do KR:</label>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between" style="font-size: 0.75rem;">
-                            <span>0%</span><span>100%</span>
-                        </div>
-                        <div class="progress rounded-pill" style="height: 14px;">
-                            <div class="progress-bar progress-bar-striped" 
-                                style="width: <?= $kr['progresso'] ?>%; background-color: <?= $kr['cor_progresso'] ?>;">
-                                <?= $kr['progresso'] ?>%
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                  <!-- 🔥 Barra de progresso do KR com cor do farol -->
+                  <div class="mt-3 px-3 pb-2 d-flex align-items-center gap-2">
+                      <label class="mb-0 fw-semibold" style="min-width: 150px;">🚀 Progresso do KR:</label>
+                      <div class="flex-grow-1">
+                          <div class="d-flex justify-content-between" style="font-size: 0.75rem;">
+                              <span>0%</span><span>100%</span>
+                          </div>
+                          <div class="progress rounded-pill" style="height: 14px;">
+                              <div class="progress-bar progress-bar-striped progress-bar-animated <?= $kr['cor_farol_confianca'] ?>"
+                                  role="progressbar"
+                                  style="width: <?= $kr['progresso'] ?>%;"
+                                  aria-valuenow="<?= $kr['progresso'] ?>"
+                                  aria-valuemin="0" aria-valuemax="100">
+                                  <?= $kr['progresso'] ?>%
+                              </div>
+                          </div>
+                      </div>
+                  </div>
 
-                <!-- Conteúdo detalhado -->
-                <div class="collapse" id="details-<?= $krId ?>">
-                    <div class="p-3 border-top">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <p>🧑‍💼 <strong>Dono:</strong> <?= htmlspecialchars($usuarios[$kr['responsavel']] ?? 'Desconhecido') ?></p>
-                                <p>📅 <strong>Prazo:</strong> <?= isset($kr['data_fim']) ? date_format($kr['data_fim'], 'd/m/Y') : '-' ?></p>
-                                <p>🕒 <strong>Último Check:</strong> <?= isset($kr['ultimo_valor']) ? htmlspecialchars($kr['ultimo_valor']) : '-' ?> em <?= isset($kr['ultima_data']) ? htmlspecialchars($kr['ultima_data']) : '-' ?></p>
-                                <p>🛡️ <strong>Margem de Confiança:</strong> <?= isset($kr['margem_confianca']) ? htmlspecialchars($kr['margem_confianca']) . '%' : '-' ?></p>
-                                <p>🚀 <strong>Tipo de Shot:</strong> <?= isset($kr['tipo_shot']) ? htmlspecialchars(ucfirst($kr['tipo_shot'])) : '-' ?></p>
-                                <p>🔄 <strong>Frequência:</strong> <?= isset($kr['tipo_frequencia_milestone']) ? htmlspecialchars($kr['tipo_frequencia_milestone']) : '-' ?></p>
-                                <p>💰 <strong>Orçamento do KR:</strong> 
-                                    <?= $kr['orcamento'] > 0 ? 'R$ ' . number_format($kr['orcamento'], 2, ',', '.') : '-' ?> 
-                                    (Utilizado: <?= $kr['realizado'] > 0 ? 'R$ ' . number_format($kr['realizado'], 2, ',', '.') : 'R$ 0,00' ?>)
-                                </p>
-                                <p>📝 <strong>Observações:</strong><br>
-                                    <?= !empty($kr['observacoes']) ? $kr['observacoes'] : '-' ?>
-                                </p>
+                  <!-- Conteúdo detalhado -->
+                  <div class="collapse" id="details-<?= $krId ?>">
+                      <div class="p-3 border-top">
+                          <div class="row">
+                              <div class="col-md-6 mb-3">
+                                  <p>🧑‍💼 <strong>Dono:</strong> <?= htmlspecialchars($usuarios[$kr['responsavel']] ?? 'Desconhecido') ?></p>
+                                  <p>📅 <strong>Prazo:</strong> <?= isset($kr['data_fim']) ? date_format($kr['data_fim'], 'd/m/Y') : '-' ?></p>
+                                  <p>🕒 <strong>Último Check:</strong> <?= isset($kr['ultimo_valor']) ? htmlspecialchars($kr['ultimo_valor']) : '-' ?> em <?= isset($kr['ultima_data']) ? htmlspecialchars($kr['ultima_data']) : '-' ?></p>
+                                  <p>🛡️ <strong>Margem de Confiança:</strong> <?= isset($kr['margem_confianca']) ? htmlspecialchars($kr['margem_confianca']) . '%' : '-' ?></p>
+                                  <p>🚀 <strong>Tipo de Shot:</strong> <?= isset($kr['tipo_shot']) ? htmlspecialchars(ucfirst($kr['tipo_shot'])) : '-' ?></p>
+                                  <p>🔄 <strong>Frequência:</strong> <?= isset($kr['tipo_frequencia_milestone']) ? htmlspecialchars($kr['tipo_frequencia_milestone']) : '-' ?></p>
+                                  <p>💰 <strong>Orçamento do KR:</strong> 
+                                      <?= $kr['orcamento'] > 0 ? 'R$ ' . number_format($kr['orcamento'], 2, ',', '.') : '-' ?> 
+                                      (Utilizado: <?= $kr['realizado'] > 0 ? 'R$ ' . number_format($kr['realizado'], 2, ',', '.') : 'R$ 0,00' ?>)
+                                  </p>
+                                  <p>📝 <strong>Observações:</strong><br>
+                                      <?= !empty($kr['observacoes']) ? $kr['observacoes'] : '-' ?>
+                                  </p>
 
-                                <!-- Botões -->
-                                <button class="btn btn-warning btn-sm fw-bold mt-2 px-3 shadow-sm"
-                                    onclick="abrirModalApontamento(
-                                        '<?= $krId ?>',
-                                        '<?= $kr['id_kr'] ?>',
-                                        <?= isset($kr['ms_atual']) ? $kr['ms_atual'] : 'null' ?>
-                                    )">
-                                    <i class="bi bi-graph-up-arrow me-1"></i> Apontar Progresso
-                                </button>
-                            </div>
+                                  <!-- Botões -->
+                                  <button class="btn btn-warning btn-sm fw-bold mt-2 px-3 shadow-sm"
+                                      onclick="abrirModalApontamento(
+                                          '<?= $krId ?>',
+                                          '<?= $kr['id_kr'] ?>',
+                                          <?= isset($kr['ms_atual']) ? $kr['ms_atual'] : 'null' ?>
+                                      )">
+                                      <i class="bi bi-graph-up-arrow me-1"></i> Apontar Progresso
+                                  </button>
+                              </div>
 
-                            <div class="col-md-6 d-flex">
-                                <div id="chart-container-<?= $krId ?>" class="flex-fill d-flex" style="height:100%;">
-                                    <canvas id="chart-<?= $krId ?>" class="flex-fill"></canvas>
-                                </div>
-                            </div>
+                              <div class="col-md-6 d-flex">
+                                  <div id="chart-container-<?= $krId ?>" class="flex-fill d-flex" style="height:100%;">
+                                      <canvas id="chart-<?= $krId ?>" class="flex-fill"></canvas>
+                                  </div>
+                              </div>
 
-                            <!-- Iniciativas -->
-                            <?php if (!empty($iniciativasPorKR[$krId])): ?>
-                                <div class="col-12 mt-3">
-                                    <h6>📋 Iniciativas</h6>
-                                    <ul class="list-group">
-                                        <?php foreach ($iniciativasPorKR[$krId] as $ini): ?>
-                                            <?php
-                                                $prazo = $ini['prazo_data'];
-                                                $hoje = date('Y-m-d');
-                                                $diasRestantes = $prazo ? (strtotime($prazo) - strtotime($hoje)) / 86400 : null;
+                              <!-- Iniciativas -->
+                              <?php if (!empty($iniciativasPorKR[$krId])): ?>
+                                  <div class="col-12 mt-3">
+                                      <h6>📋 Iniciativas</h6>
+                                      <ul class="list-group">
+                                          <?php foreach ($iniciativasPorKR[$krId] as $ini): ?>
+                                              <?php
+                                                  $prazo = $ini['prazo_data'];
+                                                  $hoje = date('Y-m-d');
+                                                  $diasRestantes = $prazo ? (strtotime($prazo) - strtotime($hoje)) / 86400 : null;
 
-                                                $statusPrazo = '';
-                                                if (in_array($ini['status'], ['concluido', 'cancelado'])) {
-                                                    $statusPrazo = '';
-                                                } elseif (!$prazo) {
-                                                    $statusPrazo = '<span class="badge bg-secondary ms-2">Sem prazo</span>';
-                                                } elseif ($diasRestantes < 0) {
-                                                    $statusPrazo = '<span class="badge bg-danger ms-2">Em Atraso</span>';
-                                                } elseif ($diasRestantes <= 7) {
-                                                    $statusPrazo = '<span class="badge bg-warning text-dark ms-2">Próximo do Prazo</span>';
-                                                } else {
-                                                    $statusPrazo = '<span class="badge bg-success ms-2">Dentro do Prazo</span>';
-                                                }
-                                            ?>
-                                            <li class="list-group-item">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <strong><?= htmlspecialchars($ini['descricao']) ?></strong><br>
-                                                        <small>🧑‍💼 <?= htmlspecialchars($ini['responsavel']) ?> | 📅 <?= htmlspecialchars($ini['prazo']) ?><?= $statusPrazo ?></small>
-                                                    </div>
-                                                    <div class="text-end">
-                                                        <select 
-                                                            class="form-select form-select-sm"
-                                                            onchange="alterarStatusIniciativa('<?= $ini['id_iniciativa'] ?>', this.value)">
-                                                            <?php foreach (['nao iniciado', 'em andamento', 'concluido', 'cancelado'] as $statusOpt): ?>
-                                                                <option value="<?= $statusOpt ?>" <?= $ini['status'] === $statusOpt ? 'selected' : '' ?>>
-                                                                    <?= ucfirst($statusOpt) ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <button class="btn btn-info btn-sm fw-bold mt-2 px-3 shadow-sm"
-                                                            onclick="abrirModalCustos('<?= $ini['id_iniciativa'] ?>', '<?= htmlspecialchars($ini['descricao']) ?>')">
-                                                            <i class="bi bi-cash-coin me-1"></i> Apontar Despesas
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                  $statusPrazo = '';
+                                                  if (in_array($ini['status'], ['concluido', 'cancelado'])) {
+                                                      $statusPrazo = '';
+                                                  } elseif (!$prazo) {
+                                                      $statusPrazo = '<span class="badge bg-secondary ms-2">Sem prazo</span>';
+                                                  } elseif ($diasRestantes < 0) {
+                                                      $statusPrazo = '<span class="badge bg-danger ms-2">Em Atraso</span>';
+                                                  } elseif ($diasRestantes <= 7) {
+                                                      $statusPrazo = '<span class="badge bg-warning text-dark ms-2">Próximo do Prazo</span>';
+                                                  } else {
+                                                      $statusPrazo = '<span class="badge bg-success ms-2">Dentro do Prazo</span>';
+                                                  }
+                                              ?>
+                                              <li class="list-group-item">
+                                                  <div class="d-flex justify-content-between align-items-center">
+                                                      <div>
+                                                          <strong><?= htmlspecialchars($ini['descricao']) ?></strong><br>
+                                                          <small>🧑‍💼 <?= htmlspecialchars($ini['responsavel']) ?> | 📅 <?= htmlspecialchars($ini['prazo']) ?><?= $statusPrazo ?></small>
+                                                      </div>
+                                                      <div class="text-end">
+                                                          <select 
+                                                              class="form-select form-select-sm"
+                                                              onchange="alterarStatusIniciativa('<?= $ini['id_iniciativa'] ?>', this.value)">
+                                                              <?php foreach (['nao iniciado', 'em andamento', 'concluido', 'cancelado'] as $statusOpt): ?>
+                                                                  <option value="<?= $statusOpt ?>" <?= $ini['status'] === $statusOpt ? 'selected' : '' ?>>
+                                                                      <?= ucfirst($statusOpt) ?>
+                                                                  </option>
+                                                              <?php endforeach; ?>
+                                                          </select>
+                                                          <button class="btn btn-info btn-sm fw-bold mt-2 px-3 shadow-sm"
+                                                              onclick="abrirModalCustos('<?= $ini['id_iniciativa'] ?>', '<?= htmlspecialchars($ini['descricao']) ?>')">
+                                                              <i class="bi bi-cash-coin me-1"></i> Apontar Despesas
+                                                          </button>
+                                                      </div>
+                                                  </div>
 
-                                                <?php if ($ini['valor_orcado'] > 0): ?>
-                                                    <div class="mt-2">
-                                                        <small>💰 Orçamento: R$ <?= number_format($ini['valor_orcado'], 2, ',', '.') ?> | Utilizado: R$ <?= number_format($ini['valor_realizado'], 2, ',', '.') ?></small>
-                                                        <div class="progress" style="height: 6px;">
-                                                            <div class="progress-bar bg-info" role="progressbar"
-                                                                style="width: <?= $ini['valor_orcado'] > 0 ? min(100, ($ini['valor_realizado'] / $ini['valor_orcado']) * 100) : 0 ?>%;">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                </div>
-                            <?php endif; ?>
+                                                  <?php if ($ini['valor_orcado'] > 0): ?>
+                                                      <div class="mt-2">
+                                                          <small>💰 Orçamento: R$ <?= number_format($ini['valor_orcado'], 2, ',', '.') ?> | Utilizado: R$ <?= number_format($ini['valor_realizado'], 2, ',', '.') ?></small>
+                                                          <div class="progress" style="height: 6px;">
+                                                              <div class="progress-bar bg-info" role="progressbar"
+                                                                  style="width: <?= $ini['valor_orcado'] > 0 ? min(100, ($ini['valor_realizado'] / $ini['valor_orcado']) * 100) : 0 ?>%;">
+                                                              </div>
+                                                          </div>
+                                                      </div>
+                                                  <?php endif; ?>
+                                              </li>
+                                          <?php endforeach; ?>
+                                      </ul>
+                                  </div>
+                              <?php endif; ?>
 
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          <?php endforeach; ?>
+      </div>
 </div>
 
 <!-- Modal Apontamento de Progresso -->
@@ -1069,6 +1127,24 @@ input[type="text"].anexo-descricao {
 .custo-planejado {
   background-color: #fef9e7;
 }
+
+.progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.kanban-container {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+
 </style>
 
 

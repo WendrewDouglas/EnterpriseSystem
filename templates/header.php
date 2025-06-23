@@ -124,6 +124,14 @@
             overlay.style.display = 'none';
         });
 
+        // ✅ Controla overlay no retorno via botão "voltar" ou "avançar" do navegador
+        window.addEventListener('pageshow', function(event) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        });
+
         // Global listener para capturar cliques em qualquer link (exceto âncoras ou elementos de collapse)
         document.addEventListener('click', function(e){
             let target = e.target;
@@ -159,11 +167,12 @@
 
 
         // Listener para navegações que não são acionadas por cliques (ex: redirecionamentos, formulários, etc.)
-        window.addEventListener('beforeunload', function(){
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.style.display = 'flex';
-            }
-        });
+//        window.addEventListener('beforeunload', function(){
+//            const overlay = document.getElementById('loadingOverlay');
+//            if (overlay) {
+//                overlay.style.display = 'flex';
+//            }
+//        });
+
     </script>
     <!-- O restante do conteúdo da página segue abaixo -->
