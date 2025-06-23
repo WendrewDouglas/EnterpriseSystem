@@ -10,6 +10,17 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 verificarPermissao('visualizar_objetivo');
 
+$mensagemSistema = '';
+if (!empty($_SESSION['sucesso_objetivo'])) {
+    $mensagemSistema = "<div class='alert alert-success'>" . $_SESSION['sucesso_objetivo'] . "</div>";
+    unset($_SESSION['sucesso_objetivo']);
+}
+if (!empty($_SESSION['erro_objetivo'])) {
+    $mensagemSistema = "<div class='alert alert-danger'>" . $_SESSION['erro_objetivo'] . "</div>";
+    unset($_SESSION['erro_objetivo']);
+}
+
+
 // 🔗 Conexões
 $dbForecast   = new Database();
 $connForecast = $dbForecast->getConnection();
@@ -351,6 +362,11 @@ include __DIR__ . '/../templates/sidebar.php';
 
 <!-- 🔥 Cabeçalho da Página -->
 <div class="content">
+    <?php if (!empty($mensagemSistema)): ?>
+      <div class="mb-3">
+          <?= $mensagemSistema ?>
+      </div>
+  <?php endif; ?>
     <div class="container my-4">
         <h1 class="mb-4 fw-bold text-primary">
             <i class="bi bi-bullseye me-2"></i>Detalhe do Objetivo
@@ -358,7 +374,7 @@ include __DIR__ . '/../templates/sidebar.php';
 
         <!-- 🔥 Cabeçalho do Objetivo -->
         <div class="card mb-4 shadow-sm">
-            <div class="card-body">
+            <div class="card-body position-relative">
                 <h3 class="fw-bold text-primary mb-2">🎯 <?= htmlspecialchars($objetivo['descricao']) ?></h3>
                 <p class="text-muted">
                     🆔 <strong><?= htmlspecialchars($objetivo['id_objetivo']) ?></strong> |
@@ -369,6 +385,13 @@ include __DIR__ . '/../templates/sidebar.php';
                     </span> |
                     🗂️ <strong><?= count($krs) ?> KRs</strong>
                 </p>
+
+                <!-- 🔧 Botão Editar -->
+                <a href="/forecast/views/OKR_editar_objetivo.php?id=<?= urlencode($objetivo['id_objetivo']) ?>"
+                  class="btn btn-outline-primary btn-sm fw-bold position-absolute top-0 end-0 m-3 shadow-sm">
+                  <i class="bi bi-pencil-square me-1"></i> Editar Objetivo
+                </a>
+
                 <div>
                     <label><strong>🚀 Progresso do Objetivo</strong></label>
                     <div class="d-flex justify-content-between">

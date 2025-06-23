@@ -57,7 +57,8 @@ $allowed_pages = [
     'OKR_novo_kr',
     'OKR_detalhe_objetivo',
     'OKR_consulta',
-    'pdv_clientes'
+    'pdv_clientes',
+    'editar_objetivo'
 ];
 
 if (in_array($page, $allowed_pages)) {

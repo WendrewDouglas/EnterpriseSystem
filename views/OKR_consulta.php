@@ -36,20 +36,41 @@ if ($stmtUsers) {
     }
 }
 
-$pilares = [
-    'Financeiro'                => ['icone' => 'bi-currency-dollar', 'cor' => '#B8860B'],
-    'Clientes'                  => ['icone' => 'bi-people', 'cor' => '#006400'],
-    'Processos Internos'        => ['icone' => 'bi-hammer', 'cor' => '#00008B'],
-    'Aprendizado e Crescimento' => ['icone' => 'bi-mortarboard', 'cor' => '#FF1493']
-];
+// Carrega os pilares direto da tabela dom_pilar_bsc (opções reais do domínio)
+$sqlPilares = "SELECT id_pilar, descricao_exibicao FROM dom_pilar_bsc ORDER BY ordem_pilar ASC";
+$stmtPilares = sqlsrv_query($connOKR, $sqlPilares);
+$pilares = [];
+if ($stmtPilares) {
+    while ($row = sqlsrv_fetch_array($stmtPilares, SQLSRV_FETCH_ASSOC)) {
+        // Aqui você pode personalizar ícone/cor se quiser, abaixo exemplo básico:
+        $icones = [
+            'financeiro' => 'bi-currency-dollar',
+            'clientes' => 'bi-people',
+            'processos internos' => 'bi-hammer',
+            'aprendizado e crescimento' => 'bi-mortarboard'
+        ];
+        $cores = [
+            'financeiro' => '#B8860B',
+            'clientes' => '#006400',
+            'processos internos' => '#00008B',
+            'aprendizado e crescimento' => '#FF1493'
+        ];
+        $id_pilar = mb_strtolower(trim($row['id_pilar']));
+        $pilares[$id_pilar] = [
+            'descricao' => $row['descricao_exibicao'],
+            'icone' => $icones[$id_pilar] ?? 'bi-diagram-3',
+            'cor' => $cores[$id_pilar] ?? '#6c757d'
+        ];
+    }
+}
 
 function normalizaPilar($texto) {
     return ucfirst(mb_strtolower(trim($texto)));
 }
 
 $dadosPilares = [];
-foreach ($pilares as $nome => $info) {
-    $dadosPilares[$nome] = [];
+foreach ($pilares as $id_pilar => $info) {
+    $dadosPilares[$id_pilar] = [];
 }
 
 // ✅ SQL Corrigido
@@ -122,14 +143,23 @@ if ($stmt === false) {
 }
 
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $pilar = normalizaPilar($row['pilar_bsc']);
-    if (!array_key_exists($pilar, $dadosPilares)) {
-        $dadosPilares[$pilar] = [];
+    // O campo pilar_bsc da tabela objetivos sempre trará o id_pilar
+    $id_pilar = mb_strtolower(trim($row['pilar_bsc'])); // Ex: 'financeiro', 'clientes', etc.
+
+    // Garante que vai pro pilar certo mesmo se futuro expandir os domínios
+    if (!array_key_exists($id_pilar, $dadosPilares)) {
+        // Se vier pilar novo não previsto, já inclui para não quebrar a tela
+        $dadosPilares[$id_pilar] = [];
+        $pilares[$id_pilar] = [
+            'descricao' => $id_pilar,
+            'icone' => 'bi-diagram-3',
+            'cor' => '#6c757d'
+        ];
     }
 
     $nomeDono = $usuarios[$row['dono']] ?? 'Desconhecido';
 
-    $dadosPilares[$pilar][] = [
+    $dadosPilares[$id_pilar][] = [
         'id' => $row['id_objetivo'],
         'nome' => $row['descricao'],
         'tipo' => ucfirst($row['tipo']),
@@ -149,25 +179,25 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
 
 <div class="content">
-    <div class="container my-4">
-        <h1 class="mb-5 text-center text-primary fw-bold">
+    <div class="kanban-container my-4 px-0">
+        <h1 class="mb-5 text-left text-primary fw-bold">
             <i class="bi bi-diagram-3 me-2"></i>Consulta de OKRs - Pilares e Objetivos
         </h1>
 
-        <?php foreach ($dadosPilares as $pilar => $objetivos):
-            $icone = $pilares[$pilar]['icone'] ?? 'bi-diagram-3';
-            $cor = $pilares[$pilar]['cor'] ?? '#6c757d';
-        ?>
-        <section class="mb-5">
-            <header class="d-flex align-items-center gap-2 mb-4 rounded p-3" style="background-color: <?= $cor ?>;">
-                <i class="bi <?= $icone ?> fs-3 text-white"></i>
-                <h2 class="m-0 fs-4 fw-semibold text-white"><?= htmlspecialchars($pilar) ?></h2>
-            </header>
-
-            <?php if (empty($objetivos)): ?>
-                <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
-            <?php else: ?>
-                <div class="row g-4" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
+        <div class="kanban-board">
+            <?php foreach ($pilares as $id_pilar => $info):
+                $objetivos = $dadosPilares[$id_pilar] ?? [];
+                $icone = $info['icone'];
+                $cor = $info['cor'];
+            ?>
+            <div class="kanban-column">
+                <header class="d-flex align-items-center gap-2 mb-4 rounded p-3" style="background-color: <?= $cor ?>;">
+                    <i class="bi <?= $icone ?> fs-3 text-white"></i>
+                    <h2 class="m-0 fs-5 fw-semibold text-white"><?= htmlspecialchars($info['descricao']) ?></h2>
+                </header>
+                <?php if (empty($objetivos)): ?>
+                    <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
+                <?php else: ?>
                     <?php foreach ($objetivos as $obj):
                         $prazoFormatado = (!empty($obj['prazo']) && $obj['prazo'] instanceof DateTime)
                             ? $obj['prazo']->format('d/m/Y')
@@ -182,7 +212,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                             <small class="text-muted fw-semibold">Prazo: <?= $prazoFormatado ?></small>
                         </header>
 
-                        <h3 class="fs-5 fw-bold text-truncate" title="<?= htmlspecialchars($obj['nome']) ?>">
+                        <h3 class="fs-5 fw-bold" title="<?= htmlspecialchars($obj['nome']) ?>">
                             <a href="index.php?page=OKR_detalhe_objetivo&id=<?= urlencode($obj['id']) ?>" 
                             class="stretched-link text-decoration-none text-dark">
                                 <?= htmlspecialchars($obj['nome']) ?>
@@ -203,7 +233,6 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                 </span>
                             </div>
 
-                            <!-- 🔥 Barra de Progresso do Objetivo -->
                             <div>
                                 <small class="text-muted">🚀 Progresso do Objetivo</small>
                                 <div class="d-flex justify-content-between">
@@ -211,7 +240,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                 </div>
                                 <div class="progress rounded-pill" style="height: 18px;">
                                     <div class="progress-bar progress-bar-striped progress-bar-animated
-                                        <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?>"
+                                        <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?> "
                                         role="progressbar" style="width: <?= $obj['progresso'] ?>%"
                                         aria-valuenow="<?= $obj['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
                                         <?= $obj['progresso'] ?>%
@@ -223,12 +252,10 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                 <small class="text-muted">Orçamento</small>
                                 <strong>R$ <?= number_format($obj['orcamento'], 2, ',', '.') ?></strong>
                             </div>
-
                             <div class="d-flex justify-content-between">
                                 <small class="text-muted">Utilizado</small>
                                 <strong>R$ <?= number_format($obj['orcamento_utilizado'], 2, ',', '.') ?></strong>
                             </div>
-
                             <div class="d-flex justify-content-between align-items-center mt-3">
                                 <small class="text-muted">Farol de Confiança</small>
                                 <?php if ($obj['farol'] === 'Alta'): ?>
@@ -242,12 +269,13 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                         </div>
                     </article>
                     <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </section>
-        <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
     </div>
 </div>
+
 
 <style>
 .objetivo-card {
@@ -311,6 +339,65 @@ section > header {
         padding: 1rem;
     }
 }
+
+.kanban-board {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    min-height: 500px;
+    overflow-x: auto;
+}
+.kanban-column {
+    background: #f7f7fb;
+    border-radius: 12px;
+    min-width: 320px;
+    max-width: 370px;
+    flex: 1 1 0;
+    margin-bottom: 16px;
+    box-shadow: 0 3px 20px rgba(60,60,90,0.06);
+    padding: 0.5rem 0.7rem 1.3rem 0.7rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 570px;
+    /* Fixar altura mínima pro quadro ficar bonito */
+}
+.kanban-column header {
+    margin-bottom: 12px;
+}
+.kanban-column .objetivo-card {
+    margin-bottom: 1.1rem;
+}
+
+@media (max-width: 991px) {
+    .kanban-board {
+        flex-direction: column;
+        gap: 2.2rem;
+    }
+    .kanban-column {
+        max-width: 100%;
+        min-width: unset;
+        min-height: 360px;
+    }
+}
+
+.kanban-container {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    /* Para quem usa sidebar fixa do Bootstrap, pode precisar ajustar margin-left */
+    /* margin-left: 260px;  Descomente e ajuste se necessário para seu layout */
+}
+.kanban-board {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100%;
+}
+
+
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
