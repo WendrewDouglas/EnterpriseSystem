@@ -4,10 +4,7 @@ require_once __DIR__ . '/../includes/db_connectionOKR.php';
 require_once __DIR__ . '/../includes/db_connection.php';
 require_once __DIR__ . '/../includes/permissions.php';
 
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
+if (session_status() == PHP_SESSION_NONE) session_start();
 verificarPermissao('consultar_okr');
 
 $pageTitle = 'Consulta de OKRs - Pilares e Objetivos';
@@ -15,65 +12,66 @@ $pageTitle = 'Consulta de OKRs - Pilares e Objetivos';
 include __DIR__ . '/../templates/header.php';
 include __DIR__ . '/../templates/sidebar.php';
 
-$dbOKR = new OKRDatabase();
-$connOKR = $dbOKR->getConnection();
-if (!$connOKR) {
-    die("<div class='alert alert-danger'>Erro de conexão com o banco OKR.</div>");
+// 🔗 Conexões
+$connOKR       = (new OKRDatabase())->getConnection();
+$connForecast  = (new Database())->getConnection();
+if (!$connOKR || !$connForecast) {
+    die("<div class='alert alert-danger'>Erro de conexão com os bancos.</div>");
 }
 
-$dbForecast = new Database();
-$connForecast = $dbForecast->getConnection();
-if (!$connForecast) {
-    die("<div class='alert alert-danger'>Erro de conexão com banco ForecastDB.</div>");
+// Função para remover acentos
+function removerAcentos($texto) {
+    $mapa = [
+        'á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a',
+        'Á'=>'A','À'=>'A','Ã'=>'A','Â'=>'A','Ä'=>'A',
+        'é'=>'e','è'=>'e','ê'=>'e','ë'=>'e',
+        'É'=>'E','È'=>'E','Ê'=>'E','Ë'=>'E',
+        'í'=>'i','ì'=>'i','î'=>'i','ï'=>'i',
+        'Í'=>'I','Ì'=>'I','Î'=>'I','Ï'=>'I',
+        'ó'=>'o','ò'=>'o','õ'=>'o','ô'=>'o','ö'=>'o',
+        'Ó'=>'O','Ò'=>'O','Õ'=>'O','Ô'=>'O','Ö'=>'O',
+        'ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u',
+        'Ú'=>'U','Ù'=>'U','Û'=>'U','Ü'=>'U',
+        'ç'=>'c','Ç'=>'C'
+    ];
+    return strtr($texto, $mapa);
 }
 
+// 🔍 Carregar usuários ativos
+$usuarios = [];
 $sqlUsers = "SELECT id, name FROM users WHERE status = 'ativo'";
 $stmtUsers = sqlsrv_query($connForecast, $sqlUsers);
-$usuarios = [];
-if ($stmtUsers) {
-    while ($rowUser = sqlsrv_fetch_array($stmtUsers, SQLSRV_FETCH_ASSOC)) {
-        $usuarios[$rowUser['id']] = $rowUser['name'];
-    }
+while ($u = sqlsrv_fetch_array($stmtUsers, SQLSRV_FETCH_ASSOC)) {
+    $usuarios[$u['id']] = $u['name'];
 }
 
-// Carrega os pilares direto da tabela dom_pilar_bsc (opções reais do domínio)
+// 🔍 Carregar pilares
+$pilares = [];
 $sqlPilares = "SELECT id_pilar, descricao_exibicao FROM dom_pilar_bsc ORDER BY ordem_pilar ASC";
 $stmtPilares = sqlsrv_query($connOKR, $sqlPilares);
-$pilares = [];
-if ($stmtPilares) {
-    while ($row = sqlsrv_fetch_array($stmtPilares, SQLSRV_FETCH_ASSOC)) {
-        // Aqui você pode personalizar ícone/cor se quiser, abaixo exemplo básico:
-        $icones = [
-            'financeiro' => 'bi-currency-dollar',
-            'clientes' => 'bi-people',
-            'processos internos' => 'bi-hammer',
-            'aprendizado e crescimento' => 'bi-mortarboard'
-        ];
-        $cores = [
-            'financeiro' => '#B8860B',
-            'clientes' => '#006400',
-            'processos internos' => '#00008B',
-            'aprendizado e crescimento' => '#FF1493'
-        ];
-        $id_pilar = mb_strtolower(trim($row['id_pilar']));
-        $pilares[$id_pilar] = [
-            'descricao' => $row['descricao_exibicao'],
-            'icone' => $icones[$id_pilar] ?? 'bi-diagram-3',
-            'cor' => $cores[$id_pilar] ?? '#6c757d'
-        ];
-    }
+while ($p = sqlsrv_fetch_array($stmtPilares, SQLSRV_FETCH_ASSOC)) {
+    $id_pilar = mb_strtolower(trim($p['id_pilar']));
+    $pilares[$id_pilar] = [
+        'descricao' => $p['descricao_exibicao'],
+        'icone'     => [
+            'financeiro'               => 'bi-currency-dollar',
+            'clientes'                 => 'bi-people',
+            'processos internos'       => 'bi-hammer',
+            'aprendizado e crescimento'=> 'bi-mortarboard'
+        ][$id_pilar] ?? 'bi-diagram-3',
+        'cor'       => [
+            'financeiro'               => '#B8860B',
+            'clientes'                 => '#006400',
+            'processos internos'       => '#00008B',
+            'aprendizado e crescimento'=> '#FF1493'
+        ][$id_pilar] ?? '#6c757d'
+    ];
 }
 
-function normalizaPilar($texto) {
-    return ucfirst(mb_strtolower(trim($texto)));
-}
+// 🗂️ Inicializar dados dos pilares
+$dadosPilares = array_fill_keys(array_keys($pilares), []);
 
-$dadosPilares = [];
-foreach ($pilares as $id_pilar => $info) {
-    $dadosPilares[$id_pilar] = [];
-}
-
-// ✅ SQL Corrigido
+// 🔍 Consulta principais dados dos objetivos
 $sql = "
 WITH ProgressoKR AS (
     SELECT 
@@ -86,23 +84,10 @@ WITH ProgressoKR AS (
             ELSE 0
         END AS progresso_kr
     FROM key_results kr
-    OUTER APPLY (
-        SELECT TOP 1 * FROM milestones_kr 
-        WHERE id_kr = kr.id_kr 
-        ORDER BY num_ordem ASC
-    ) msBase
-    OUTER APPLY (
-        SELECT TOP 1 * FROM milestones_kr 
-        WHERE id_kr = kr.id_kr 
-        ORDER BY num_ordem DESC
-    ) msMeta
-    OUTER APPLY (
-        SELECT TOP 1 * FROM milestones_kr 
-        WHERE id_kr = kr.id_kr AND valor_real IS NOT NULL
-        ORDER BY num_ordem DESC
-    ) msUlt
+    OUTER APPLY (SELECT TOP 1 * FROM milestones_kr WHERE id_kr = kr.id_kr ORDER BY num_ordem ASC)   msBase
+    OUTER APPLY (SELECT TOP 1 * FROM milestones_kr WHERE id_kr = kr.id_kr ORDER BY num_ordem DESC)  msMeta
+    OUTER APPLY (SELECT TOP 1 * FROM milestones_kr WHERE id_kr = kr.id_kr AND valor_real IS NOT NULL ORDER BY num_ordem DESC) msUlt
 )
-
 SELECT 
     obj.id_objetivo,
     obj.descricao,
@@ -112,9 +97,7 @@ SELECT
     obj.status,
     obj.dt_prazo,
     obj.qualidade,
-
     (SELECT COUNT(*) FROM key_results kr WHERE kr.id_objetivo = obj.id_objetivo) AS qtd_kr,
-
     ISNULL((
         SELECT SUM(o.valor)
         FROM orcamentos o
@@ -122,58 +105,84 @@ SELECT
         INNER JOIN key_results kr ON i.id_kr = kr.id_kr
         WHERE kr.id_objetivo = obj.id_objetivo
     ), 0) AS orcamento,
-
-    0 AS orcamento_utilizado,
-
     ISNULL((
         SELECT AVG(p.progresso_kr) 
         FROM ProgressoKR p
         WHERE p.id_objetivo = obj.id_objetivo
     ), 0) AS progresso
-
 FROM objetivos obj;
 ";
-
 $stmt = sqlsrv_query($connOKR, $sql);
-if ($stmt === false) {
-    echo "<div class='alert alert-danger'>Erro na consulta de objetivos:<br><pre>";
+if (!$stmt) {
+    echo "<div class='alert alert-danger'>Erro na consulta:<pre>";
     print_r(sqlsrv_errors());
     echo "</pre></div>";
     exit;
 }
 
+// 🔍 Processamento dos dados dos objetivos
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    // O campo pilar_bsc da tabela objetivos sempre trará o id_pilar
-    $id_pilar = mb_strtolower(trim($row['pilar_bsc'])); // Ex: 'financeiro', 'clientes', etc.
-
-    // Garante que vai pro pilar certo mesmo se futuro expandir os domínios
-    if (!array_key_exists($id_pilar, $dadosPilares)) {
-        // Se vier pilar novo não previsto, já inclui para não quebrar a tela
-        $dadosPilares[$id_pilar] = [];
-        $pilares[$id_pilar] = [
-            'descricao' => $id_pilar,
-            'icone' => 'bi-diagram-3',
-            'cor' => '#6c757d'
-        ];
+    $id_pilar = mb_strtolower(trim($row['pilar_bsc']));
+    if (!isset($pilares[$id_pilar])) {
+        $pilares[$id_pilar]      = ['descricao'=> ucfirst($id_pilar), 'icone'=>'bi-diagram-3', 'cor'=>'#6c757d'];
+        $dadosPilares[$id_pilar]  = [];
     }
 
     $nomeDono = $usuarios[$row['dono']] ?? 'Desconhecido';
 
+    // ❶ Buscar o pior farol de confiança entre os KRs deste objetivo
+    $sqlFarol = "
+      SELECT TOP 1 farol
+      FROM key_results
+      WHERE id_objetivo = ?
+      ORDER BY 
+        CASE 
+          WHEN LOWER(farol) = 'péssimo' THEN 1
+          WHEN LOWER(farol) = 'ruim'     THEN 2
+          WHEN LOWER(farol) = 'bom'      THEN 3
+          WHEN LOWER(farol) = 'ótimo'    THEN 4
+          ELSE 5
+        END ASC
+    ";
+    $stmFarol = sqlsrv_query($connOKR, $sqlFarol, [$row['id_objetivo']]);
+    $piorFarol = sqlsrv_fetch_array($stmFarol, SQLSRV_FETCH_ASSOC)['farol'] ?? '-';
+
+    // 🚀 Montar dados do objetivo
     $dadosPilares[$id_pilar][] = [
-        'id' => $row['id_objetivo'],
-        'nome' => $row['descricao'],
-        'tipo' => ucfirst($row['tipo']),
-        'dono' => $nomeDono,
-        'status' => strtolower(str_replace(' ', '-', $row['status'])),
-        'prazo' => $row['dt_prazo'],
-        'qualidade' => ucfirst($row['qualidade']),
-        'qtd_kr' => $row['qtd_kr'],
-        'orcamento' => round($row['orcamento'], 2),
-        'orcamento_utilizado' => round($row['orcamento_utilizado'], 2),
-        'progresso' => round($row['progresso'], 1),
-        'farol' => ($row['progresso'] >= 80) ? 'Alta' : (($row['progresso'] >= 50) ? 'Média' : 'Baixa')
+        'id'                  => $row['id_objetivo'],
+        'nome'                => $row['descricao'],
+        'tipo'                => ucfirst($row['tipo']),
+        'dono'                => $nomeDono,
+        'status'              => strtolower(str_replace(' ', '-', $row['status'])),
+        'prazo'               => $row['dt_prazo'],
+        'qualidade'           => ucfirst($row['qualidade']),
+        'qtd_kr'              => $row['qtd_kr'],
+        'orcamento'           => round($row['orcamento'], 2),
+        'orcamento_utilizado' => 0,
+        'progresso'           => round($row['progresso'], 1),
+        'farol'               => $piorFarol,
     ];
 }
+
+// 🔢 Calcular métricas dos pilares
+$pilaresMetrica = [];
+foreach ($pilares as $id_pilar => $info) {
+    $objetivos    = $dadosPilares[$id_pilar] ?? [];
+    $qtd_obj      = count($objetivos);
+    $qtd_krs      = array_sum(array_column($objetivos, 'qtd_kr'));
+    $soma_prog    = array_sum(array_column($objetivos, 'progresso'));
+    $krsAtingidos = array_sum(array_map(fn($o)=> $o['progresso']>=100 ? $o['qtd_kr']:0, $objetivos));
+    $krsRisco     = array_sum(array_map(fn($o)=> $o['progresso']<50  ? $o['qtd_kr']:0, $objetivos));
+
+    $pilaresMetrica[$id_pilar] = [
+        'qtd_objetivos'      => $qtd_obj,
+        'qtd_krs'            => $qtd_krs,
+        'progresso_geral'    => $qtd_obj ? round($soma_prog/$qtd_obj,1):0,
+        'perc_krs_atingidos' => $qtd_krs? round(($krsAtingidos/$qtd_krs)*100,1):0,
+        'perc_krs_risco'     => $qtd_krs? round(($krsRisco   /$qtd_krs)*100,1):0,
+    ];
+}
+
 ?>
 
 
@@ -191,10 +200,32 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                 $cor = $info['cor'];
             ?>
             <div class="kanban-column">
-                <header class="d-flex align-items-center gap-2 mb-4 rounded p-3" style="background-color: <?= $cor ?>;">
-                    <i class="bi <?= $icone ?> fs-3 text-white"></i>
-                    <h2 class="m-0 fs-5 fw-semibold text-white"><?= htmlspecialchars($info['descricao']) ?></h2>
+                <header class="mb-2 rounded p-3" style="background-color: <?= $cor ?>;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi <?= $icone ?> fs-3 text-white"></i>
+                        <h2 class="m-0 fs-5 fw-semibold text-white"><?= htmlspecialchars($info['descricao']) ?></h2>
+                    </div>
+                    <div class="pilar-info text-white" style="font-size: 0.99em;">
+                        <div>🎯 <strong><?= $pilaresMetrica[$id_pilar]['qtd_objetivos'] ?></strong> objetivos &nbsp; | &nbsp; 
+                            <strong><?= $pilaresMetrica[$id_pilar]['qtd_krs'] ?></strong> key results</div>
+                        <div class="d-flex gap-4">
+                            <div>⚠️ <strong><?= $pilaresMetrica[$id_pilar]['perc_krs_atingidos'] ?>%</strong> KRs Atingidos &nbsp; | &nbsp;
+                                <strong><?= $pilaresMetrica[$id_pilar]['perc_krs_risco'] ?>%</strong> KRs em Risco</div>
+                        </div>
+                        <div class="mt-1">
+                            <span>Progresso geral:</span>
+                            <span class="fw-bold"><?= $pilaresMetrica[$id_pilar]['progresso_geral'] ?>%</span>
+                            <div class="progress rounded-pill mt-1" style="height: 13px; background:#e8f0fa;">
+                                <div class="progress-bar bg-primary" role="progressbar"
+                                    style="width: <?= $pilaresMetrica[$id_pilar]['progresso_geral'] ?>%"
+                                    aria-valuenow="<?= $pilaresMetrica[$id_pilar]['progresso_geral'] ?>" aria-valuemin="0" aria-valuemax="100">
+                                    <?= $pilaresMetrica[$id_pilar]['progresso_geral'] ?>%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </header>
+
                 <?php if (empty($objetivos)): ?>
                     <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
                 <?php else: ?>
@@ -205,8 +236,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                     ?>
                     <article tabindex="0" role="article" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
                         <header class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge 
-                                <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
+                            <span class="badge <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
                                 <?= htmlspecialchars($obj['tipo']) ?>
                             </span>
                             <small class="text-muted fw-semibold">Prazo: <?= $prazoFormatado ?></small>
@@ -227,8 +257,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">Status</small>
-                                <span class="badge
-                                    <?= $obj['status'] === 'cancelado' ? 'bg-danger' : 'bg-info' ?>">
+                                <span class="badge <?= $obj['status'] === 'cancelado' ? 'bg-danger' : 'bg-info' ?>">
                                     <?= ucfirst(str_replace('-', ' ', $obj['status'])) ?>
                                 </span>
                             </div>
@@ -239,8 +268,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                     <span>0%</span><span>100%</span>
                                 </div>
                                 <div class="progress rounded-pill" style="height: 18px;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated
-                                        <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?> "
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated <?= $obj['progresso'] >= 80 ? 'bg-success' : ($obj['progresso'] >= 50 ? 'bg-warning text-dark' : 'bg-danger') ?>"
                                         role="progressbar" style="width: <?= $obj['progresso'] ?>%"
                                         aria-valuenow="<?= $obj['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
                                         <?= $obj['progresso'] ?>%
@@ -252,19 +280,39 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                 <small class="text-muted">Orçamento</small>
                                 <strong>R$ <?= number_format($obj['orcamento'], 2, ',', '.') ?></strong>
                             </div>
+
                             <div class="d-flex justify-content-between">
                                 <small class="text-muted">Utilizado</small>
                                 <strong>R$ <?= number_format($obj['orcamento_utilizado'], 2, ',', '.') ?></strong>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <small class="text-muted">Farol de Confiança</small>
-                                <?php if ($obj['farol'] === 'Alta'): ?>
-                                    <span class="badge bg-success px-3 py-2 fs-6 fw-semibold">Alta</span>
-                                <?php elseif ($obj['farol'] === 'Média'): ?>
-                                    <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-semibold">Média</span>
-                                <?php else: ?>
-                                    <span class="badge bg-danger px-3 py-2 fs-6 fw-semibold">Baixa</span>
-                                <?php endif; ?>
+
+                            <div class="farol-wrapper mt-3">
+                                <div class="d-flex justify-content-between align-items-center w-100">
+                                    <small class="text-muted">Farol de Confiança</small>
+                                    <?php
+                                        $farol = strtolower(removerAcentos($obj['farol']));
+                                        if ($farol === 'otimo') {
+                                            $badge = 'bg-purple';
+                                            $label = 'Ótimo';
+                                        } elseif ($farol === 'bom') {
+                                            $badge = 'bg-success';
+                                            $label = 'Bom';
+                                        } elseif ($farol === 'moderado') {
+                                            $badge = 'bg-warning text-dark';
+                                            $label = 'Moderado';
+                                        } elseif ($farol === 'ruim') {
+                                            $badge = 'bg-orange text-dark';
+                                            $label = 'Ruim';
+                                        } elseif ($farol === 'pessimo') {
+                                            $badge = 'bg-dark';
+                                            $label = 'Péssimo';
+                                        } else {
+                                            $badge = 'bg-secondary';
+                                            $label = '-';
+                                        }
+                                    ?>
+                                    <span class="badge <?= $badge ?> px-3 py-2 fs-6 fw-semibold"><?= $label ?></span>
+                                </div>
                             </div>
                         </div>
                     </article>
@@ -275,6 +323,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         </div>
     </div>
 </div>
+
 
 
 <style>
@@ -397,6 +446,48 @@ section > header {
     width: 100%;
 }
 
+.bg-purple {
+    background-color: #6f42c1 !important;
+    color: #fff;
+}
+
+.bg-orange {
+    background-color: #fd7e14 !important;
+    color: #fff;
+}
+
+.bg-dark {
+    background-color: #000 !important;
+    color: #fff;
+}
+
+.farol-alinhado-direita {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.farol-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+}
+
+.bg-purple {
+    background-color: #6f42c1 !important;
+    color: #fff;
+}
+
+.bg-orange {
+    background-color: #fd7e14 !important;
+    color: #fff;
+}
+
+.bg-dark {
+    background-color: #000 !important;
+    color: #fff;
+}
 
 </style>
 
