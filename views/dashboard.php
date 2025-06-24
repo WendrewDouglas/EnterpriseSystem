@@ -1,181 +1,274 @@
 <?php
-// Proteção de acesso não autorizado
+// 🔒 Proteções
 require_once __DIR__ . '/../includes/auto_check.php';
-
-// Inclusão da conexão com o banco de dados
 require_once __DIR__ . '/../includes/db_connection.php';
+require_once __DIR__ . '/../includes/db_connectionOKR.php';
+require_once __DIR__ . '/../includes/permissions.php';
 
-// Recupera a conexão a partir da instância $db definida no db_connection.php
-$conn = $db->getConnection();
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Verifica se a conexão foi estabelecida corretamente
-if (!isset($conn) || $conn === null) {
-    error_log("Erro: Variável \$conn não definida. Verifique o arquivo db_connection.php.");
-    die("Erro interno: conexão com banco de dados não estabelecida.");
-}
-
-// Definição do título da página
 $pageTitle = 'Dashboard - Forecast System';
 
-// Inclusão do header e sidebar
 include __DIR__ . '/../templates/header.php';
 include __DIR__ . '/../templates/sidebar.php';
 
-// Função para obter a referência do próximo mês (formato m/Y)
+// 🔗 Conexões
+$connForecast = (new Database())->getConnection();
+$connOKR      = (new OKRDatabase())->getConnection();
+
+if (!$connForecast || !$connOKR) {
+    die("<div class='alert alert-danger'>❌ Erro: conexão com banco de dados não estabelecida.</div>");
+}
+
+// 🗓️ Função referência próximo mês
 function getNextMonthReference() {
     return date('m/Y', strtotime('first day of next month'));
 }
-
 $nextMonth = getNextMonthReference();
 
-// BUSCA: Lista de regionais e status de forecast
-$mesRef = $nextMonth; // $nextMonth já vem no formato "m/Y", por exemplo, "03/2025"
+
+// 🔍 Consulta Regionais
 $sqlRegionais = "
-    SELECT d.Regional AS codigo, d.NomeRegional AS nome,
-           CASE WHEN m.cod_gestor IS NOT NULL THEN 'enviado' ELSE 'não enviado' END AS matriz_status,
-           CASE WHEN f.cod_gestor IS NOT NULL THEN 'enviado' ELSE 'não enviado' END AS filial_status
-    FROM DW..DEPARA_COMERCIAL d
-    LEFT JOIN (
-         SELECT DISTINCT cod_gestor 
-         FROM forecast_entries 
-         WHERE mes_referencia = ? AND finalizado = 1 AND empresa = 1001
-    ) m ON d.Regional = m.cod_gestor
-    LEFT JOIN (
-         SELECT DISTINCT cod_gestor 
-         FROM forecast_entries 
-         WHERE mes_referencia = ? AND finalizado = 1 AND empresa = 1002
-    ) f ON d.Regional = f.cod_gestor
-    WHERE d.Regional IS NOT NULL AND LOWER(d.status_regional) = 'ativo'
-    ORDER BY d.NomeRegional ASC
+SELECT d.Regional AS codigo, d.NomeRegional AS nome,
+       CASE WHEN m.cod_gestor IS NOT NULL THEN 'enviado' ELSE 'não enviado' END AS matriz_status,
+       CASE WHEN f.cod_gestor IS NOT NULL THEN 'enviado' ELSE 'não enviado' END AS filial_status
+FROM DW..DEPARA_COMERCIAL d
+LEFT JOIN (
+     SELECT DISTINCT cod_gestor 
+     FROM forecast_entries 
+     WHERE mes_referencia = ? AND finalizado = 1 AND empresa = 1001
+) m ON d.Regional = m.cod_gestor
+LEFT JOIN (
+     SELECT DISTINCT cod_gestor 
+     FROM forecast_entries 
+     WHERE mes_referencia = ? AND finalizado = 1 AND empresa = 1002
+) f ON d.Regional = f.cod_gestor
+WHERE d.Regional IS NOT NULL AND LOWER(d.status_regional) = 'ativo'
+ORDER BY d.NomeRegional ASC;
 ";
-$stmtRegionais = sqlsrv_query($conn, $sqlRegionais, [$mesRef, $mesRef]);
-if ($stmtRegionais === false) {
-    error_log("Erro ao consultar regionais (join): " . print_r(sqlsrv_errors(), true));
-    $regionais = [];
-} else {
-    $regionais = [];
-    while ($row = sqlsrv_fetch_array($stmtRegionais, SQLSRV_FETCH_ASSOC)) {
-        $regionais[] = $row;
-    }
+
+$stmtRegionais = sqlsrv_query($connForecast, $sqlRegionais, [$nextMonth, $nextMonth]);
+$regionais = [];
+while ($r = sqlsrv_fetch_array($stmtRegionais, SQLSRV_FETCH_ASSOC)) {
+    $regionais[] = $r;
 }
 
 
-// BUSCA: Total de usuários cadastrados
-$sqlUsuarios = "SELECT COUNT(*) as total FROM users";
-$stmtUsuarios = sqlsrv_query($conn, $sqlUsuarios);
-if ($stmtUsuarios === false) {
-    error_log("Erro ao consultar usuários: " . print_r(sqlsrv_errors(), true));
-    $totalUsuarios = 0;
-} else {
-    $totalUsuarios = 0;
-    if ($row = sqlsrv_fetch_array($stmtUsuarios, SQLSRV_FETCH_ASSOC)) {
-        $totalUsuarios = $row['total'];
-    }
+// 🔍 Total de usuários
+$stmtUsuarios = sqlsrv_query($connForecast, "SELECT COUNT(*) AS total FROM users");
+$totalUsuarios = ($u = sqlsrv_fetch_array($stmtUsuarios, SQLSRV_FETCH_ASSOC)) ? intval($u['total']) : 0;
+
+
+// 🔥 🔍 Mapa Estratégico dos OKRs
+
+// Carregar pilares
+$pilares = [];
+$sqlPilares = "SELECT id_pilar, descricao_exibicao FROM dom_pilar_bsc ORDER BY ordem_pilar ASC";
+$stmtPilares = sqlsrv_query($connOKR, $sqlPilares);
+while ($p = sqlsrv_fetch_array($stmtPilares, SQLSRV_FETCH_ASSOC)) {
+    $id = mb_strtolower(trim($p['id_pilar']));
+    $pilares[$id] = [
+        'descricao' => $p['descricao_exibicao'],
+        'icone'     => [
+            'financeiro'               => 'bi-currency-dollar',
+            'clientes'                 => 'bi-people',
+            'processos internos'       => 'bi-hammer',
+            'aprendizado e crescimento'=> 'bi-mortarboard'
+        ][$id] ?? 'bi-diagram-3',
+        'cor'       => [
+            'financeiro'               => '#B8860B',
+            'clientes'                 => '#006400',
+            'processos internos'       => '#00008B',
+            'aprendizado e crescimento'=> '#FF1493'
+        ][$id] ?? '#6c757d'
+    ];
+}
+
+// Query mapa estratégico
+$sqlMapa = "
+WITH ProgressoKR AS (
+    SELECT 
+        kr.id_kr,
+        kr.id_objetivo,
+        CASE 
+            WHEN (msMeta.valor_esperado - msBase.valor_esperado) <> 0 THEN
+                ROUND( ((ISNULL(msUlt.valor_real, msBase.valor_esperado) - msBase.valor_esperado) 
+                / (msMeta.valor_esperado - msBase.valor_esperado)) * 100, 1)
+            ELSE 0
+        END AS progresso_kr
+    FROM key_results kr
+    OUTER APPLY (SELECT TOP 1 * FROM milestones_kr WHERE id_kr = kr.id_kr ORDER BY num_ordem ASC) msBase
+    OUTER APPLY (SELECT TOP 1 * FROM milestones_kr WHERE id_kr = kr.id_kr ORDER BY num_ordem DESC) msMeta
+    OUTER APPLY (SELECT TOP 1 * FROM milestones_kr WHERE id_kr = kr.id_kr AND valor_real IS NOT NULL ORDER BY num_ordem DESC) msUlt
+),
+ProgressoObjetivo AS (
+    SELECT 
+        id_objetivo,
+        AVG(progresso_kr) AS progresso_objetivo
+    FROM ProgressoKR
+    GROUP BY id_objetivo
+)
+SELECT 
+    o.pilar_bsc,
+    COUNT(DISTINCT o.id_objetivo) AS qtd_objetivos,
+    ISNULL(AVG(p.progresso_objetivo), 0) AS progresso_medio
+FROM objetivos o
+LEFT JOIN ProgressoObjetivo p ON o.id_objetivo = p.id_objetivo
+GROUP BY o.pilar_bsc;
+";
+
+$stmtMapa = sqlsrv_query($connOKR, $sqlMapa);
+$dadosPilares = [];
+while ($row = sqlsrv_fetch_array($stmtMapa, SQLSRV_FETCH_ASSOC)) {
+    $id = mb_strtolower(trim($row['pilar_bsc']));
+    $dadosPilares[$id] = [
+        'progresso'    => round($row['progresso_medio'], 1),
+        'objetivos'    => intval($row['qtd_objetivos']),
+        'descricao'    => $pilares[$id]['descricao'] ?? ucfirst($id),
+        'icone'        => $pilares[$id]['icone'] ?? 'bi-diagram-3',
+        'cor'          => $pilares[$id]['cor'] ?? '#6c757d'
+    ];
 }
 ?>
 
-<div class="content">
-    <h2 class="mb-4">Bem-vindo ao Dashboard</h2>
+<!-- ===================== HTML ========================= -->
 
-    <div class="row">
-        <!-- Card de Regionais -->
-        <div class="col-md-6 mb-4">
+<div class="content">
+    <h2 class="mb-4 fw-bold text-primary">
+        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+    </h2>
+
+    <div class="row g-4">
+
+        <!-- 🔥 Planejamento Estratégico -->
+        <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <i class="fas fa-map-marker-alt"></i> Apontamentos de Forecast
+                <div class="card-header bg-primary text-white fw-bold">
+                    <i class="bi bi-diagram-3 me-2"></i>Planejamento Estratégico BSC & OKRs
                 </div>
                 <div class="card-body">
-                    <?php 
-                    // Contagem regressiva: prazo até o dia 15 deste mês às 23h30
-                    $now = new DateTime();
-                    $deadline = new DateTime(date('Y-m-15 23:59:59'));
-                    if ($now > $deadline) {
-                        $countdownText = "Prazo encerrado";
-                    } else {
-                        $interval = $now->diff($deadline);
-                        $countdownText = $interval->format('%d dias, %h horas e %i minutos');
-                    }
+                    <div class="row text-center g-4">
+                        <?php foreach ($dadosPilares as $id => $p): ?>
+                            <div class="col-md-3 col-sm-6">
+                                <a href="index.php?page=OKR_consulta" class="text-decoration-none">
+                                    <div class="border rounded p-3 shadow-sm h-100 d-flex flex-column justify-content-between card-pilar"
+                                        style="border-top: 4px solid <?= $p['cor'] ?>; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                                        <div>
+                                            <i class="bi <?= $p['icone'] ?> fs-2" style="color: <?= $p['cor'] ?>;"></i>
+                                            <h5 class="fw-bold mt-2 text-dark"><?= htmlspecialchars($p['descricao']) ?></h5>
+                                        </div>
+                                        <div>
+                                            <div class="progress rounded-pill mb-1" style="height: 14px;">
+                                                <div class="progress-bar" role="progressbar"
+                                                    style="width: <?= $p['progresso'] ?>%; background-color: <?= $p['cor'] ?>;"
+                                                    aria-valuenow="<?= $p['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
+                                                    <?= $p['progresso'] ?>%
+                                                </div>
+                                            </div>
+                                            <small class="text-dark"><?= $p['objetivos'] ?> objetivos</small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔥 Card Forecast -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white fw-bold">
+                    <i class="bi bi-building me-2"></i>Apontamentos de Forecast
+                </div>
+                <div class="card-body">
+                    <?php
+                        $now = new DateTime();
+                        $deadline = new DateTime(date('Y-m-15 23:59:59'));
+                        $countdownText = ($now > $deadline) ? "Prazo encerrado"
+                            : $now->diff($deadline)->format('%d dias, %h horas e %i minutos');
                     ?>
                     <div class="mb-3">
                         <strong>Prazo para informar o forecast do próximo trimestre:</strong><br>
-                        <small>Data/Hora limite: <?php echo $deadline->format('d/m/Y H:i'); ?></small><br>
-                        <small>Faltam <?php echo $countdownText; ?> para fechar os apontamentos</small>
+                        <small>Data/Hora limite: <?= $deadline->format('d/m/Y H:i'); ?></small><br>
+                        <small>Faltam <?= $countdownText; ?> para fechar os apontamentos.</small>
                     </div>
 
-                    <!-- Botões de Ação -->
-                    <div class="mt-4">
-                        <a href="index.php?page=apontar_forecast" class="btn btn-primary me-2">
-                            <i class="fas fa-chart-line"></i> Apontar Forecast
+                    <div class="mt-3">
+                        <a href="index.php?page=apontar_forecast" class="btn btn-success me-2">
+                            <i class="bi bi-graph-up"></i> Apontar Forecast
                         </a>
-                        <a href="index.php?page=configuracoes" class="btn btn-info me-2">
-                            <i class="fas fa-cogs"></i> Configurações
+                        <a href="index.php?page=configuracoes" class="btn btn-outline-secondary">
+                            <i class="bi bi-gear"></i> Configurações
                         </a>
                     </div>
 
-
-                    <?php if (!empty($regionais)): ?>
-                        <ul class="mt-4 list-group">
-                        <strong>Lista de Gestores</strong><br>
+                    <ul class="mt-4 list-group">
+                        <strong>Lista de Regionais</strong>
                         <?php foreach ($regionais as $regional): ?>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong><?php echo htmlspecialchars($regional['codigo']); ?></strong> - <?php echo htmlspecialchars($regional['nome']); ?>
+                                    <strong><?= htmlspecialchars($regional['codigo']); ?></strong> — <?= htmlspecialchars($regional['nome']); ?>
                                 </div>
                                 <div>
-                                    <span class="badge <?php echo ($regional['matriz_status'] == 'enviado' ? 'bg-success' : 'bg-danger'); ?>">
-                                        <i class="fas <?php echo ($regional['matriz_status'] == 'enviado' ? 'fa-check' : 'fa-exclamation-triangle'); ?>"></i> Matriz
+                                    <span class="badge <?= ($regional['matriz_status'] == 'enviado' ? 'bg-success' : 'bg-danger'); ?>">
+                                        Matriz
                                     </span>
-                                    <span class="badge <?php echo ($regional['filial_status'] == 'enviado' ? 'bg-success' : 'bg-danger'); ?> ms-2">
-                                        <i class="fas <?php echo ($regional['filial_status'] == 'enviado' ? 'fa-check' : 'fa-exclamation-triangle'); ?>"></i> Filial
+                                    <span class="badge <?= ($regional['filial_status'] == 'enviado' ? 'bg-success' : 'bg-danger'); ?> ms-2">
+                                        Filial
                                     </span>
                                 </div>
                             </li>
                         <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>
-                        <p>Nenhum regional cadastrado.</p>
-                    <?php endif; ?>
+                    </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Card de Usuários -->
-        <div class="col-md-6 mb-4">
+        <!-- 🔥 Card Usuários e Sell-Out -->
+        <div class="col-md-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <i class="fas fa-users"></i> Usuários Cadastrados
+                <div class="card-header bg-secondary text-white fw-bold">
+                    <i class="bi bi-people-fill me-2"></i>Usuários Cadastrados
                 </div>
                 <div class="card-body">
-                    <h3><?php echo $totalUsuarios; ?></h3>
+                    <h3 class="fw-bold"><?= $totalUsuarios ?></h3>
                     <p>Total de usuários cadastrados no sistema.</p>
-                    <a href="index.php?page=users" class="btn btn-outline-secondary">Gerenciar Usuários</a>
-                </div>
-            </div>
-
- <!-- Card de Aviso de Sell-Out Disponível -->
- <div class="mt-4 card shadow-sm border-success">
-                <div class="card-body">
-                    <h5 class="card-title text-success">
-                        <i class="fas fa-check-circle"></i> Novo: Envio de Sell-Out Disponível!
-                    </h5>
-                    <p class="card-text">
-                        O envio de registros de Sell-Out já está disponível! Agora você pode importar seus dados diretamente para o sistema de forma rápida e prática.
-                    </p>
-                    <a href="index.php?page=enviar_sellout" class="btn btn-success">
-                        <i class="fas fa-upload"></i> Enviar Sell-Out
+                    <a href="index.php?page=users" class="btn btn-outline-secondary">
+                        <i class="bi bi-person-gear"></i> Gerenciar Usuários
                     </a>
                 </div>
-            </div>            
+            </div>
+
+            <div class="card mt-4 shadow-sm border-success">
+                <div class="card-body">
+                    <h5 class="fw-bold text-success">
+                        <i class="bi bi-box-arrow-up"></i> Envio de Sell-Out Disponível!
+                    </h5>
+                    <p>Agora você pode importar seus dados diretamente no sistema de forma rápida e prática.</p>
+                    <a href="index.php?page=enviar_sellout" class="btn btn-success">
+                        <i class="bi bi-upload"></i> Enviar Sell-Out
+                    </a>
+                </div>
+            </div>
         </div>
+
     </div>
-
-   
-
 </div>
 
-<!-- Inclusão dos scripts do Bootstrap e Font Awesome -->
+<style>
+    .card-pilar {
+        cursor: pointer;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card-pilar:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        z-index: 5;
+    }
+</style>
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Substitua "seu-kit-fontawesome.js" pelo seu kit real do Font Awesome -->
-<script src="https://kit.fontawesome.com/seu-kit-fontawesome.js" crossorigin="anonymous"></script>
-</body>
-</html>

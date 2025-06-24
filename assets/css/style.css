@@ -210,3 +210,16 @@
 }
 
 
+.card .progress-bar {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.card .border {
+    background-color: #f8f9fa;
+    transition: transform 0.3s ease;
+}
+.card .border:hover {
+    transform: scale(1.05);
+}

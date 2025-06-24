@@ -310,34 +310,33 @@ $krs_risco_global = $total_krs ?
                             ? $obj['prazo']->format('d/m/Y')
                             : (is_string($obj['prazo']) ? date('d/m/Y', strtotime($obj['prazo'])) : 'Sem Prazo');
                     ?>
-                    <article tabindex="0" role="article" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
-                        <header class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
-                                <?= htmlspecialchars($obj['tipo']) ?>
-                            </span>
-                            <small class="text-muted fw-semibold">Prazo: <?= $prazoFormatado ?></small>
-                        </header>
-
-                        <h3 class="fs-5 fw-bold" title="<?= htmlspecialchars($obj['nome']) ?>">
-                            <a href="index.php?page=OKR_detalhe_objetivo&id=<?= urlencode($obj['id']) ?>" 
-                            class="stretched-link text-decoration-none text-dark">
-                                <?= htmlspecialchars($obj['nome']) ?>
-                            </a>
-                        </h3>
-
-                        <div class="d-flex flex-column gap-2 mt-3 flex-grow-1">
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">Dono</small>
-                                <strong><?= htmlspecialchars($obj['dono']) ?></strong>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">Status</small>
-                                <span class="badge <?= $obj['status'] === 'cancelado' ? 'bg-danger' : 'bg-info' ?>">
-                                    <?= ucfirst(str_replace('-', ' ', $obj['status'])) ?>
+                        <article tabindex="0" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
+                            <header class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
+                                    <?= htmlspecialchars($obj['tipo']) ?>
                                 </span>
-                            </div>
+                                <small class="text-muted"><?= $prazoFormatado ?></small>
+                            </header>
 
+                            <h3 class="fw-semibold">
+                                <a href="index.php?page=OKR_detalhe_objetivo&id=<?= urlencode($obj['id']) ?>" 
+                                class="stretched-link text-decoration-none text-dark">
+                                    <?= htmlspecialchars($obj['nome']) ?>
+                                </a>
+                            </h3>
+
+                            <div class="d-flex flex-column gap-1 mt-2">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">Dono</small>
+                                    <strong class="small"><?= htmlspecialchars($obj['dono']) ?></strong>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">Status</small>
+                                    <span class="badge <?= $obj['status'] === 'cancelado' ? 'bg-danger' : 'bg-info' ?>">
+                                        <?= ucfirst(str_replace('-', ' ', $obj['status'])) ?>
+                                    </span>
+                                </div>
                             <div>
                                 <?php
                                     $farol = strtolower(removerAcentos($obj['farol']));
@@ -385,17 +384,7 @@ $krs_risco_global = $total_krs ?
                             </div>
 
 
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">Orçamento</small>
-                                <strong>R$ <?= number_format($obj['orcamento'], 2, ',', '.') ?></strong>
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">Utilizado</small>
-                                <strong>R$ <?= number_format($obj['orcamento_utilizado'], 2, ',', '.') ?></strong>
-                            </div>
-
-                            <div class="farol-wrapper mt-3">
+                            <div class="farol-wrapper mt-2">
                                 <div class="d-flex justify-content-between align-items-center w-100">
                                     <small class="text-muted">Farol de Confiança</small>
                                     <?php
@@ -420,7 +409,7 @@ $krs_risco_global = $total_krs ?
                                             $label = '-';
                                         }
                                     ?>
-                                    <span class="badge <?= $badge ?> px-3 py-2 fs-6 fw-semibold"><?= $label ?></span>
+                                    <span class="badge <?= $badge ?> px-2 py-1 fw-semibold"><?= $label ?></span>
                                 </div>
                             </div>
                         </div>
@@ -436,17 +425,17 @@ $krs_risco_global = $total_krs ?
 
 
 <style>
-/* === 🎯 Card de Objetivo === */
+/* === Card de Objetivo === */
 .objetivo-card {
     border: 1px solid #ddd;
     border-radius: 10px;
     background: #fff;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    padding: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    padding: 0.8rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 340px;
+    min-height: 250px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
 }
@@ -454,128 +443,127 @@ $krs_risco_global = $total_krs ?
 .objetivo-card:hover,
 .objetivo-card:focus-visible {
     transform: scale(1.03);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    outline: none;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     z-index: 10;
+    outline: none;
 }
 
-
-/* === 🔠 Tipografia === */
+/* Tipografia */
 h1, h2, h3 {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+h3 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+}
+
 .badge {
-    font-size: 0.85rem;
-    padding: 0.35em 0.75em;
+    font-size: 0.7rem;
+    padding: 0.3em 0.6em;
     border-radius: 0.375rem;
 }
 
-
-/* === 📊 Barra de Progresso === */
+/* Barra de Progresso */
 .progress {
     background-color: #f0f0f0;
+    height: 10px;
 }
+
 .progress-bar {
-    font-weight: 600;
+    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-
-/* === 📋 Layout Kanban === */
+/* Layout Kanban */
 .kanban-container {
     width: 100%;
-    margin: 0;
     padding: 0;
+    margin: 0;
 }
 
 .kanban-board {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    width: 100%;
+    gap: 0.3rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     align-items: flex-start;
+    width: 100%;
+    padding-bottom: 8px;
 }
 
 .kanban-column {
     background: #f7f7fb;
     border-radius: 12px;
-    flex: 1 1 calc(25% - 1rem);
-    min-width: 280px;
-    margin-bottom: 10px;
+    min-width: 25%;
+    max-width: 25%;
+    flex: 1 1 0;
     box-shadow: 0 3px 20px rgba(60,60,90,0.06);
-    padding: 0.7rem 0.8rem 1rem;
+    padding: 0.8rem 1rem;
     display: flex;
     flex-direction: column;
-    min-height: 520px;
 }
 
 .kanban-column header {
     border-radius: 10px;
-    padding: 0.8rem;
+    padding: 0.7rem;
     margin-bottom: 8px;
 }
 
 .kanban-column .objetivo-card {
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
 }
 
-
-/* === 🔧 Responsividade === */
+/* Responsividade */
 @media (max-width: 1200px) {
-    .kanban-column {
-        flex: 1 1 calc(33.33% - 1rem);
+    .kanban-board {
+        flex-wrap: wrap;
     }
-}
-
-@media (max-width: 992px) {
     .kanban-column {
         flex: 1 1 calc(50% - 1rem);
+        min-width: 320px;
     }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
     .kanban-board {
         flex-direction: column;
     }
     .kanban-column {
         flex: 1 1 100%;
         min-width: unset;
-        min-height: 380px;
     }
     .objetivo-card {
-        min-height: 360px;
-        padding: 1rem;
+        min-height: 230px;
+        padding: 0.7rem;
     }
 }
 
-
-/* === 🚥 Farol de Confiança === */
-.farol-wrapper,
-.farol-alinhado-direita {
+/* Farol de Confiança */
+.farol-wrapper {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     width: 100%;
 }
 
+/* Cores de Farol */
+.bg-purple { background-color: #6f42c1 !important; color: #fff !important; }
+.bg-success { background-color: #198754 !important; color: #fff !important; }
+.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+.bg-orange { background-color: #fd7e14 !important; color: #fff !important; }
+.bg-dark { background-color: #212529 !important; color: #fff !important; }
+.bg-secondary { background-color: #6c757d !important; color: #fff !important; }
 
-/* === 🗂️ Componentes Card === */
-.card h1 {
-    font-size: 2.2rem;
-    font-weight: 700;
-}
-.card h5 {
-    letter-spacing: 0.5px;
-}
-.card .small {
-    color: #555;
-}
+/* Diversos */
+.alert-light { font-size: 0.9rem; }
+.text-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+.bg-white { background-color: #fff !important; }
+.bg-light { background-color: #f8f9fa !important; }
 
-/* === 🏗️ Container === */
 .container-xxl {
     width: 100%;
     max-width: 100%;
@@ -583,57 +571,9 @@ h1, h2, h3 {
     margin: 0;
 }
 
-
-/* === 🌗 Sombras === */
 .shadow-sm {
     box-shadow: 0 4px 18px rgba(0,0,0,0.06);
 }
-
-
-/* === 🎨 Cores do Farol === */
-.bg-purple {
-    background-color: #6f42c1 !important;
-    color: #fff !important;
-}
-.bg-success {
-    background-color: #198754 !important;
-    color: #fff !important;
-}
-.bg-warning {
-    background-color: #ffc107 !important;
-    color: #000 !important;
-}
-.bg-orange {
-    background-color: #fd7e14 !important;
-    color: #fff !important;
-}
-.bg-dark {
-    background-color: #212529 !important;
-    color: #fff !important;
-}
-.bg-secondary {
-    background-color: #6c757d !important;
-    color: #fff !important;
-}
-
-
-/* === 🔔 Diversos === */
-.alert-light {
-    font-size: 1rem;
-}
-.text-truncate {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.bg-white {
-    background-color: #fff !important;
-}
-.bg-light {
-    background-color: #f8f9fa !important;
-}
-
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
