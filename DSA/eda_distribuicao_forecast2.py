@@ -60,8 +60,10 @@ def main():
             f"SELECT * FROM forecast_entries WHERE mes_referencia = '{mes_ref}'", engine
         )
         if not df_forecast_modelo_full.empty:
-            idx = df_forecast_modelo_full.groupby(['cod_gestor'])['finalizado'].idxmin()
-            df_forecast_modelo = df_forecast_modelo_full.loc[idx].reset_index(drop=True)
+            min_finalizado = df_forecast_modelo_full.groupby(
+                ['mes_referencia', 'cod_gestor']
+            )['finalizado'].transform('min')
+            df_forecast_modelo = df_forecast_modelo_full[df_forecast_modelo_full['finalizado'] == min_finalizado].copy()
         else:
             df_forecast_modelo = pd.DataFrame()
         
@@ -69,8 +71,10 @@ def main():
             f"SELECT * FROM forecast_entries_sku WHERE mes_referencia = '{mes_ref}'", engine
         )
         if not df_forecast_sku_full.empty:
-            idx_sku = df_forecast_sku_full.groupby(['codigo_gestor'])['finalizada'].idxmin()
-            df_forecast_sku = df_forecast_sku_full.loc[idx_sku].reset_index(drop=True)
+            min_finalizada = df_forecast_sku_full.groupby(
+                ['mes_referencia', 'codigo_gestor']
+            )['finalizada'].transform('min')
+            df_forecast_sku = df_forecast_sku_full[df_forecast_sku_full['finalizada'] == min_finalizada].copy()
         else:
             df_forecast_sku = pd.DataFrame()
         # <<< FIM DAS ALTERAÇÕES ESSENCIAIS <<<
