@@ -85,6 +85,7 @@ while ($p = sqlsrv_fetch_array($stmtPilares, SQLSRV_FETCH_ASSOC)) {
 }
 
 // Query mapa estratégico
+// 🔥 Consulta Mapa Estratégico dos OKRs com progresso, qtd de objetivos e qtd de KRs
 $sqlMapa = "
 WITH ProgressoKR AS (
     SELECT 
@@ -109,21 +110,24 @@ ProgressoObjetivo AS (
     GROUP BY id_objetivo
 )
 SELECT 
-    o.pilar_bsc,
+    LOWER(o.pilar_bsc) AS pilar,
     COUNT(DISTINCT o.id_objetivo) AS qtd_objetivos,
+    COUNT(kr.id_kr) AS qtd_krs,
     ISNULL(AVG(p.progresso_objetivo), 0) AS progresso_medio
 FROM objetivos o
 LEFT JOIN ProgressoObjetivo p ON o.id_objetivo = p.id_objetivo
+LEFT JOIN key_results kr ON o.id_objetivo = kr.id_objetivo
 GROUP BY o.pilar_bsc;
 ";
 
 $stmtMapa = sqlsrv_query($connOKR, $sqlMapa);
 $dadosPilares = [];
 while ($row = sqlsrv_fetch_array($stmtMapa, SQLSRV_FETCH_ASSOC)) {
-    $id = mb_strtolower(trim($row['pilar_bsc']));
+    $id = mb_strtolower(trim($row['pilar']));
     $dadosPilares[$id] = [
         'progresso'    => round($row['progresso_medio'], 1),
         'objetivos'    => intval($row['qtd_objetivos']),
+        'krs'          => intval($row['qtd_krs']),
         'descricao'    => $pilares[$id]['descricao'] ?? ucfirst($id),
         'icone'        => $pilares[$id]['icone'] ?? 'bi-diagram-3',
         'cor'          => $pilares[$id]['cor'] ?? '#6c757d'
@@ -148,28 +152,34 @@ while ($row = sqlsrv_fetch_array($stmtMapa, SQLSRV_FETCH_ASSOC)) {
                 </div>
                 <div class="card-body">
                     <div class="row text-center g-4">
-                        <?php foreach ($dadosPilares as $id => $p): ?>
-                            <div class="col-md-3 col-sm-6">
-                                <a href="index.php?page=OKR_consulta" class="text-decoration-none">
-                                    <div class="border rounded p-3 shadow-sm h-100 d-flex flex-column justify-content-between card-pilar"
-                                        style="border-top: 4px solid <?= $p['cor'] ?>; transition: transform 0.3s ease, box-shadow 0.3s ease;">
-                                        <div>
-                                            <i class="bi <?= $p['icone'] ?> fs-2" style="color: <?= $p['cor'] ?>;"></i>
-                                            <h5 class="fw-bold mt-2 text-dark"><?= htmlspecialchars($p['descricao']) ?></h5>
-                                        </div>
-                                        <div>
-                                            <div class="progress rounded-pill mb-1" style="height: 14px;">
-                                                <div class="progress-bar" role="progressbar"
-                                                    style="width: <?= $p['progresso'] ?>%; background-color: <?= $p['cor'] ?>;"
-                                                    aria-valuenow="<?= $p['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
-                                                    <?= $p['progresso'] ?>%
-                                                </div>
+                        <?php foreach ($pilares as $id => $pilar): ?>
+                            <?php if (isset($dadosPilares[$id])): 
+                                $dados = $dadosPilares[$id];
+                            ?>
+                                <div class="col-md-3 col-sm-6">
+                                    <a href="index.php?page=OKR_consulta" class="text-decoration-none">
+                                        <div class="border rounded p-3 shadow-sm h-100 d-flex flex-column justify-content-between card-pilar"
+                                            style="border-top: 4px solid <?= $dados['cor'] ?>;">
+                                            <div>
+                                                <i class="bi <?= $dados['icone'] ?> fs-2" style="color: <?= $dados['cor'] ?>;"></i>
+                                                <h5 class="fw-bold mt-2 text-dark"><?= htmlspecialchars($dados['descricao']) ?></h5>
                                             </div>
-                                            <small class="text-dark"><?= $p['objetivos'] ?> objetivos</small>
+                                            <div>
+                                                <div class="progress rounded-pill mb-1" style="height: 14px;">
+                                                    <div class="progress-bar" role="progressbar"
+                                                        style="width: <?= $dados['progresso'] ?>%; background-color: <?= $dados['cor'] ?>;"
+                                                        aria-valuenow="<?= $dados['progresso'] ?>" aria-valuemin="0" aria-valuemax="100">
+                                                        <?= $dados['progresso'] ?>%
+                                                    </div>
+                                                </div>
+                                                <small class="text-dark">
+                                                    <?= $dados['objetivos'] ?> objetivos | <?= $dados['krs'] ?> KRs
+                                                </small>
+                                            </div>
                                         </div>
-                                    </div>
-                                </a>
-                            </div>
+                                    </a>
+                                </div>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
