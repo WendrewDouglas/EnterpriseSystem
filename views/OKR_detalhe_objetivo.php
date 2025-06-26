@@ -10,14 +10,23 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 verificarPermissao('visualizar_objetivo');
 
+// 🔔 Mensagens do sistema
 $mensagemSistema = '';
 if (!empty($_SESSION['sucesso_objetivo'])) {
-    $mensagemSistema = "<div class='alert alert-success'>" . $_SESSION['sucesso_objetivo'] . "</div>";
+    $mensagemSistema .= "<div class='alert alert-success mb-3'>{$_SESSION['sucesso_objetivo']}</div>";
     unset($_SESSION['sucesso_objetivo']);
 }
+if (!empty($_SESSION['sucesso_kr'])) {
+    $mensagemSistema .= "<div class='alert alert-success mb-3'>{$_SESSION['sucesso_kr']}</div>";
+    unset($_SESSION['sucesso_kr']);
+}
 if (!empty($_SESSION['erro_objetivo'])) {
-    $mensagemSistema = "<div class='alert alert-danger'>" . $_SESSION['erro_objetivo'] . "</div>";
+    $mensagemSistema .= "<div class='alert alert-danger mb-3'>{$_SESSION['erro_objetivo']}</div>";
     unset($_SESSION['erro_objetivo']);
+}
+if (!empty($_SESSION['erro_kr'])) {
+    $mensagemSistema .= "<div class='alert alert-danger mb-3'>{$_SESSION['erro_kr']}</div>";
+    unset($_SESSION['erro_kr']);
 }
 
 
@@ -53,6 +62,9 @@ $idObjetivo = $_GET['id'] ?? '';
 if (empty($idObjetivo)) {
     die("<div class='alert alert-danger'>ID do Objetivo não informado.</div>");
 }
+
+// 📦 KR que deve vir aberto
+$openKR = $_GET['open_kr'] ?? '';
 
 // 🔍 Carregar usuários ativos
 $sqlUsers   = "SELECT id, name FROM users WHERE status = 'ativo'";
@@ -424,43 +436,51 @@ include __DIR__ . '/../templates/sidebar.php';
               <i class="bi bi-bullseye me-2"></i>Detalhe do Objetivo
           </h1>
 
-          <!-- 🔥 Cabeçalho do Objetivo -->
-          <div class="card mb-4 shadow-sm">
-              <div class="card-body position-relative">
-                  <h3 class="fw-bold text-primary mb-2">🎯 <?= htmlspecialchars($objetivo['descricao']) ?></h3>
-                  <p class="text-muted">
-                      🆔 <strong><?= htmlspecialchars($objetivo['id_objetivo']) ?></strong> |
-                      🧭 Pilar: <span class="badge bg-dark"><?= ucfirst($objetivo['pilar_bsc']) ?></span> |
-                      📊 Tipo: 
-                      <span class="badge <?= $objetivo['tipo'] === 'estrategico' ? 'bg-primary' : ($objetivo['tipo'] === 'tatico' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
-                          <?= ucfirst($objetivo['tipo']) ?>
-                      </span> |
-                      🗂️ <strong><?= count($krs) ?> KRs</strong>
-                  </p>
+    <!-- 🔥 Cabeçalho do Objetivo -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body d-flex align-items-start">
+        <!-- Bloco de texto flexível, com margem à direita para o botão -->
+        <div class="flex-grow-1 me-3" style="min-width: 0;">
+          <h3 class="fw-bold text-primary mb-2" style="word-break: break-word;">
+            🎯 <?= htmlspecialchars($objetivo['descricao']) ?>
+          </h3>
+          <p class="text-muted mb-0" style="word-break: break-word;">
+            🆔 <strong><?= htmlspecialchars($objetivo['id_objetivo']) ?></strong> |
+            🧭 Pilar: <span class="badge bg-dark"><?= ucfirst($objetivo['pilar_bsc']) ?></span> |
+            📊 Tipo:
+            <span class="badge <?= $objetivo['tipo'] === 'estrategico'
+                ? 'bg-primary'
+                : ($objetivo['tipo'] === 'tatico'
+                    ? 'bg-warning text-dark'
+                    : 'bg-secondary') ?>">
+              <?= ucfirst($objetivo['tipo']) ?>
+            </span> |
+            🗂️ <strong><?= count($krs) ?> KRs</strong>
+          </p>
+        </div>
 
-                  <!-- 🔧 Botão Editar -->
-                  <a href="/forecast/views/OKR_editar_objetivo.php?id=<?= urlencode($objetivo['id_objetivo']) ?>"
-                    class="btn btn-outline-primary btn-sm fw-bold position-absolute top-0 end-0 m-3 shadow-sm">
-                    <i class="bi bi-pencil-square me-1"></i> Editar Objetivo
-                  </a>
+        <!-- Botão fixo, sem encolher -->
+        <a href="/forecast/views/OKR_editar_objetivo.php?id=<?= urlencode($objetivo['id_objetivo']) ?>"
+          class="btn btn-outline-primary btn-sm fw-bold flex-shrink-0 shadow-sm">
+          <i class="bi bi-pencil-square me-1"></i> Editar Objetivo
+        </a>
+      </div>
 
-                  <div>
-                      <label><strong>🚀 Progresso do Objetivo</strong></label>
-                      <div class="d-flex justify-content-between">
-                          <span>0%</span><span>100%</span>
-                      </div>
-                      <div class="progress rounded-pill" style="height: 20px;">
-                          <div class="progress-bar progress-bar-striped progress-bar-animated <?= $corFarolObjetivo ?>"
-                              role="progressbar"
-                              style="width: <?= $mediaProgresso ?>%;"
-                              aria-valuenow="<?= $mediaProgresso ?>" aria-valuemin="0" aria-valuemax="100">
-                              <?= $mediaProgresso ?>%
-                          </div>
-                      </div>
-                  </div>
-              </div>
+      <div class="card-body pt-0">
+        <label><strong>🚀 Progresso do Objetivo</strong></label>
+        <div class="d-flex justify-content-between">
+          <span>0%</span><span>100%</span>
+        </div>
+        <div class="progress rounded-pill" style="height: 20px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated <?= $corFarolObjetivo ?>"
+              role="progressbar"
+              style="width: <?= $mediaProgresso ?>%;"
+              aria-valuenow="<?= $mediaProgresso ?>" aria-valuemin="0" aria-valuemax="100">
+            <?= $mediaProgresso ?>%
           </div>
-
+        </div>
+      </div>
+    </div>
           <!-- 📈 Lista de KRs -->
           <?php foreach ($krs as $kr): ?>
               <?php $krId = str_replace(['/', ' '], '_', $kr['id_kr']); ?>
@@ -505,7 +525,7 @@ include __DIR__ . '/../templates/sidebar.php';
                   </div>
 
                   <!-- Conteúdo detalhado -->
-                  <div class="collapse" id="details-<?= $krId ?>">
+                  <div class="collapse <?= (isset($openKR) && $openKR === $kr['id_kr']) ? 'show' : '' ?>" id="details-<?= $krId ?>">
                       <div class="p-3 border-top">
                           <div class="row">
                               <div class="col-md-6 mb-3">
@@ -523,7 +543,7 @@ include __DIR__ . '/../templates/sidebar.php';
                                       <?= !empty($kr['observacoes']) ? $kr['observacoes'] : '-' ?>
                                   </p>
 
-                                  <!-- Botões -->
+                                  <!-- Botão de apontamento -->
                                   <button class="btn btn-warning btn-sm fw-bold mt-2 px-3 shadow-sm"
                                       onclick="abrirModalApontamento(
                                           '<?= $krId ?>',
@@ -531,6 +551,12 @@ include __DIR__ . '/../templates/sidebar.php';
                                           <?= isset($kr['ms_atual']) ? $kr['ms_atual'] : 'null' ?>
                                       )">
                                       <i class="bi bi-graph-up-arrow me-1"></i> Apontar Progresso
+                                  </button>
+                                  <!-- Editar KR -->
+                                  <button
+                                      class="btn btn-danger btn-sm fw-bold mt-2 px-3 shadow-sm"
+                                      onclick="location.href='/forecast/views/OKR_editar_kr.php?id_kr=<?= urlencode($kr['id_kr']) ?>&id_objetivo=<?= urlencode($objetivo['id_objetivo']) ?>'">
+                                      <i class="bi bi-pencil-fill me-1"></i> Editar KR
                                   </button>
                               </div>
 
@@ -540,7 +566,7 @@ include __DIR__ . '/../templates/sidebar.php';
                                   </div>
                               </div>
 
-                              <!-- Iniciativas -->
+                              <!-- Iniciativas existentes -->
                               <?php if (!empty($iniciativasPorKR[$krId])): ?>
                                   <div class="col-12 mt-3">
                                       <h6>📋 Iniciativas</h6>
@@ -550,8 +576,6 @@ include __DIR__ . '/../templates/sidebar.php';
                                                   $prazo = $ini['prazo_data'];
                                                   $hoje = date('Y-m-d');
                                                   $diasRestantes = $prazo ? (strtotime($prazo) - strtotime($hoje)) / 86400 : null;
-
-                                                  $statusPrazo = '';
                                                   if (in_array($ini['status'], ['concluido', 'cancelado'])) {
                                                       $statusPrazo = '';
                                                   } elseif (!$prazo) {
@@ -592,7 +616,7 @@ include __DIR__ . '/../templates/sidebar.php';
                                                           <small>💰 Orçamento: R$ <?= number_format($ini['valor_orcado'], 2, ',', '.') ?> | Utilizado: R$ <?= number_format($ini['valor_realizado'], 2, ',', '.') ?></small>
                                                           <div class="progress" style="height: 6px;">
                                                               <div class="progress-bar bg-info" role="progressbar"
-                                                                  style="width: <?= $ini['valor_orcado'] > 0 ? min(100, ($ini['valor_realizado'] / $ini['valor_orcado']) * 100) : 0 ?>%;">
+                                                                  style="width: <?= min(100, ($ini['valor_realizado'] / max(1, $ini['valor_orcado'])) * 100) ?>%;">
                                                               </div>
                                                           </div>
                                                       </div>
@@ -603,12 +627,28 @@ include __DIR__ . '/../templates/sidebar.php';
                                   </div>
                               <?php endif; ?>
 
+                              <!-- 🔘 Botão discreto “Adicionar Iniciativa” -->
+                              <div class="col-12 text-center mt-2">
+                                  <a href="/forecast/views/OKR_novo_iniciativa.php?id_objetivo=<?= urlencode($objetivo['id_objetivo']) ?>&id_kr=<?= urlencode($kr['id_kr']) ?>"
+                                    class="btn btn-light btn-sm text-secondary">
+                                      <i class="bi bi-plus-circle me-1"></i> Adicionar Iniciativa
+                                  </a>
+                              </div>
                           </div>
                       </div>
                   </div>
               </div>
           </div>
           <?php endforeach; ?>
+          <!-- 🔘 Botão para adicionar novo KR -->
+          <div class="card mb-5 shadow-sm border">
+              <div class="card-body text-center">
+                  <a href="OKR_novo_kr.php?id_objetivo=<?= urlencode($objetivo['id_objetivo']) ?>" 
+                    class="btn btn-outline-primary fw-bold">
+                      <i class="bi bi-plus-circle me-2"></i> Novo Key Result
+                  </a>
+              </div>
+          </div>
       </div>
 </div>
 
@@ -660,97 +700,90 @@ include __DIR__ . '/../templates/sidebar.php';
 const milestonesData = <?= $jsMilestones ?>;
 const renderedCharts = {};
 
-// === Renderização dos gráficos ===
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.collapse').forEach(collapse => {
-    collapse.addEventListener('show.bs.collapse', function() {
-      const krId = this.id.replace('details-', '');
-      if (renderedCharts[krId]) return;
+// === Função de renderização de gráfico de um KR específico ===
+function renderChart(krId) {
+  if (renderedCharts[krId]) return;
+  const data = milestonesData[krId] || [];
+  const canvas = document.getElementById(`chart-${krId}`);
+  if (!canvas) return;
 
-      const canvas = document.getElementById(`chart-${krId}`);
-      const data = milestonesData[krId] || [];
+  if (!data.length) {
+    document.getElementById(`chart-container-${krId}`).innerHTML =
+      `<div class="alert alert-warning mt-2">
+         ⚠️ Não foi possível definir os milestones automaticamente. Aponte manualmente.
+       </div>`;
+    renderedCharts[krId] = true;
+    return;
+  }
 
-      if (!data.length) {
-        document.getElementById(`chart-container-${krId}`).innerHTML =
-          `<div class="alert alert-warning mt-2">
-            ⚠️ Não foi possível definir os milestones automaticamente. Aponte manualmente.
-          </div>`;
-        renderedCharts[krId] = true;
-        return;
-      }
+  const labels   = data.map(m => m.data_ref);
+  const esperado = data.map(m => m.valor_esperado);
+  const realizado= data.map(m => m.valor_real ?? null);
 
-      const labels = data.map(m => m.data_ref);
-      const esperado = data.map(m => m.valor_esperado);
-      const realizado = data.map(m => m.valor_real ?? null);
+  // Último milestone com valor_real
+  const revIndex = [...data].reverse().findIndex(m => m.valor_real !== null);
+  const ultimo   = revIndex === -1 ? null : data[data.length - 1 - revIndex];
 
-      // 🔍 Pegando baseline e meta
-      const baseline = esperado[0];
-      const meta = esperado[esperado.length - 1];
+  // Cor da linha de "Realizado"
+  let corReal = '#bfbfbf';
+  if (ultimo) {
+    // aqui você pode buscar a direção real do backend em vez de hard-code 'maior'
+    if (ultimo.valor_real >= ultimo.valor_esperado) corReal = '#82c291';
+    else                                     corReal = '#d96b6b';
+  }
 
-      // 🔍 Último milestone com valor_real
-      const ultimoMsIndex = [...data].reverse().findIndex(m => m.valor_real !== null);
-      const ultimoIndex = ultimoMsIndex !== -1 ? (data.length - 1 - ultimoMsIndex) : null;
-      const ultimoMs = ultimoIndex !== null ? data[ultimoIndex] : null;
-
-      // 🔍 Definindo direção (idealmente trazer do backend)
-      const direcao = 'maior'; // 'maior', 'menor' ou 'intervalo'
-
-      // 🔥 Definindo cor da linha com base no milestone específico
-      let corLinha = 'gray'; // padrão sem dados
-
-      if (ultimoMs) {
-        const real = ultimoMs.valor_real;
-        const esperadoMs = ultimoMs.valor_esperado;
-
-        if (direcao === 'maior') {
-          corLinha = real >= esperadoMs ? 'green' : 'red';
-        } else if (direcao === 'menor') {
-          corLinha = real <= esperadoMs ? 'green' : 'red';
-        } else if (direcao === 'intervalo') {
-          corLinha = (real >= baseline && real <= meta) ? 'green' : 'red';
+  new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Projeção',
+          data: esperado,
+          tension: 0.3,
+          pointRadius: 4,
+          borderColor: '#6fa8dc',
+          backgroundColor: '#6fa8dc'
+        },
+        {
+          label: 'Realizado',
+          data: realizado,
+          tension: 0.3,
+          pointRadius: 4,
+          borderColor: corReal,
+          backgroundColor: corReal,
+          spanGaps: true
         }
-      }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
 
-    new Chart(canvas.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Projeção',
-            data: esperado,
-            tension: 0.3,
-            pointRadius: 4,
-            borderColor: '#6fa8dc',    // Azul claro
-            backgroundColor: '#6fa8dc'
-          },
-          {
-            label: 'Realizado',
-            data: realizado,
-            tension: 0.3,
-            pointRadius: 4,
-            borderColor: corLinha === 'green' ? '#82c291' :
-                        corLinha === 'red'   ? '#d96b6b' :
-                        '#bfbfbf', // cinza caso sem dados
-            backgroundColor: corLinha === 'green' ? '#82c291' :
-                            corLinha === 'red'   ? '#d96b6b' :
-                            '#bfbfbf',
-            spanGaps: true
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { y: { beginAtZero: true } }
-      }
-    });
+  renderedCharts[krId] = true;
+}
 
-      renderedCharts[krId] = true;
+// === Inicialização ao carregar a página ===
+document.addEventListener('DOMContentLoaded', () => {
+  // 1) quando o usuário expande um painel
+  document.querySelectorAll('.collapse').forEach(collapseEl => {
+    collapseEl.addEventListener('show.bs.collapse', () => {
+      const krId = collapseEl.id.replace('details-', '');
+      renderChart(krId);
     });
   });
+
+  // 2) já renderiza gráficos de painéis que vieram abertos (classe "show")
+  document.querySelectorAll('.collapse.show').forEach(collapseEl => {
+    const krId = collapseEl.id.replace('details-', '');
+    renderChart(krId);
+  });
 });
+
 
 // === Função para alteração de status da Iniciativa ===
 function alterarStatusIniciativa(idIniciativa, novoStatus) {

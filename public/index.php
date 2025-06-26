@@ -58,7 +58,8 @@ $allowed_pages = [
     'OKR_detalhe_objetivo',
     'OKR_consulta',
     'pdv_clientes',
-    'editar_objetivo'
+    'editar_objetivo',
+    'OKR_mapa'
 ];
 
 if (in_array($page, $allowed_pages)) {

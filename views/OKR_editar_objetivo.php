@@ -109,8 +109,11 @@ include __DIR__ . '/../templates/sidebar.php';
 ?>
 
 <div class="content">
-    <h2 class="mb-4"><i class="bi bi-pencil-square me-2 fs-4"></i> Editar Objetivo</h2>
-
+          <h1 class="mb-4 fw-bold text-primary">
+              <i class="bi bi-pencil-square me-2 fs-4"></i>Detalhe do Objetivo
+          </h1>
+</div>
+<div class="content">
     <?php if (!empty($_SESSION['erro_objetivo'])): ?>
         <div><?= $_SESSION['erro_objetivo']; unset($_SESSION['erro_objetivo']); ?></div>
     <?php elseif (!empty($_SESSION['sucesso_objetivo'])): ?>
@@ -186,7 +189,7 @@ include __DIR__ . '/../templates/sidebar.php';
 
         <div class="col-md-6">
             <div class="form-floating">
-                <textarea name="observacoes" id="observacoes" class="form-control" style="height: 100px;" placeholder="Observações adicionais"><?= htmlspecialchars($objetivo['observacoes']) ?></textarea>
+                <textarea name="observacoes" id="observacoes" class="form-control" style="height: 100px;" placeholder="Observações adicionais"></textarea>
                 <label for="observacoes">Observações</label>
             </div>
         </div>

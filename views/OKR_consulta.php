@@ -60,10 +60,10 @@ while ($p = sqlsrv_fetch_array($stmtPilares, SQLSRV_FETCH_ASSOC)) {
             'aprendizado e crescimento'=> 'bi-mortarboard'
         ][$id_pilar] ?? 'bi-diagram-3',
         'cor'       => [
-            'financeiro'               => '#B8860B',
-            'clientes'                 => '#006400',
-            'processos internos'       => '#00008B',
-            'aprendizado e crescimento'=> '#FF1493'
+            'financeiro'               => '#f39c12',
+            'clientes'                 => '#27ae60',
+            'processos internos'       => '#2980b9',
+            'aprendizado e crescimento'=> '#8e44ad'
         ][$id_pilar] ?? '#6c757d'
     ];
 }
@@ -302,15 +302,15 @@ $krs_risco_global = $total_krs ?
                     </div>
                 </header>
 
-                <?php if (empty($objetivos)): ?>
-                    <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
-                <?php else: ?>
-                    <?php foreach ($objetivos as $obj):
-                        $prazoFormatado = (!empty($obj['prazo']) && $obj['prazo'] instanceof DateTime)
-                            ? $obj['prazo']->format('d/m/Y')
-                            : (is_string($obj['prazo']) ? date('d/m/Y', strtotime($obj['prazo'])) : 'Sem Prazo');
-                    ?>
-                        <article tabindex="0" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
+                    <?php if (empty($objetivos)): ?>
+                        <div class="alert alert-light text-center">Nenhum objetivo cadastrado.</div>
+                    <?php else: ?>
+                        <?php foreach ($objetivos as $obj):
+                            $prazoFormatado = (!empty($obj['prazo']) && $obj['prazo'] instanceof DateTime)
+                                ? $obj['prazo']->format('d/m/Y')
+                                : (is_string($obj['prazo']) ? date('d/m/Y', strtotime($obj['prazo'])) : 'Sem Prazo');
+                        ?>
+                            <article tabindex="0" class="card objetivo-card p-3 shadow-sm <?= $obj['status'] ?>" aria-label="Objetivo <?= htmlspecialchars($obj['nome']) ?>">
                             <header class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="badge <?= $obj['tipo'] === 'Estratégico' ? 'bg-primary' : ($obj['tipo'] === 'Tático' ? 'bg-warning text-dark' : 'bg-secondary') ?>">
                                     <?= htmlspecialchars($obj['tipo']) ?>
@@ -416,6 +416,12 @@ $krs_risco_global = $total_krs ?
                     </article>
                     <?php endforeach; ?>
                 <?php endif; ?>
+                <!-- 🔘 BOTÃO DE NOVO OBJETIVO -->
+                <div class="mt-3 text-center">
+                    <a href="OKR_novo_objetivo.php" class="btn btn-light border rounded-circle" title="Novo Objetivo">
+                        <i class="bi bi-plus-lg fs-4"></i>
+                    </a>
+                </div>
             </div>
             <?php endforeach; ?>
         </div>

@@ -21,6 +21,11 @@ if (!$loggedUserId) die("<div class='alert alert-danger'>Usuário não autentica
 $formData = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
 
+// 🔘 Pré-selecionar “Objetivo Associado” se vier via GET
+if (isset($_GET['id_objetivo']) && empty($formData['id_objetivo'])) {
+    $formData['id_objetivo'] = $_GET['id_objetivo'];
+}
+
 $mensagemSistema = '';
 if (!empty($_SESSION['erro_kr'])) {
     $mensagemSistema = "<div class='alert alert-danger mt-3'>" . $_SESSION['erro_kr'] . "</div>";
@@ -239,14 +244,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         sqlsrv_commit($connOKR);
         $_SESSION['sucesso_kr'] = 'Key Result e Milestones criados com sucesso!';
+        
+        // redireciona para a página de detalhe do objetivo, já abrindo o KR criado
+        header(
+            "Location: OKR_detalhe_objetivo.php" .
+            "?id="   . urlencode($id_objetivo) .
+            "&open_kr=" . urlencode($id_kr)
+        );
+        exit;
     } catch (Exception $e) {
         sqlsrv_rollback($connOKR);
         $_SESSION['erro_kr'] = 'Erro ao inserir: ' . $e->getMessage();
         $_SESSION['form_data'] = $_POST;
+        // em caso de erro, volta para o próprio formulário
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit;
     }
-
-    header("Location: " . $_SERVER['REQUEST_URI']);
-    exit;
 }
 
 // 🔥 Front-End continua normalmente
@@ -261,8 +274,9 @@ include __DIR__ . '/../templates/sidebar.php';
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 
 <div class="content">
-    <h2 class="mb-4"><i class="bi bi-bar-chart-line me-2 fs-4"></i> Novo Key Result</h2>
-
+          <h1 class="mb-4 fw-bold text-primary">
+              <i class="bi bi-bar-chart-line me-2 fs-4"></i>Novo Key Result
+          </h1>
     <?php if (!empty($mensagemSistema)) echo $mensagemSistema; ?>
 
     <!-- Seção de orientações -->
@@ -300,18 +314,18 @@ include __DIR__ . '/../templates/sidebar.php';
                        data-bs-content="Selecione o objetivo estratégico ao qual este Key Result estará conectado. Isso facilita o alinhamento e rastreabilidade das metas.">
                     </i>
                 </label>
-                <select name="id_objetivo" id="id_objetivo" class="form-select select2" required>
-                    <option value="">Selecione...</option>
-                    <?php foreach ($objetivos as $obj): ?>
-                        <option 
-                            value="<?= $obj['id'] ?>"
-                            data-descricao="<?= htmlspecialchars($obj['text']) ?>"
-                            <?= ($formData['id_objetivo'] ?? '') === $obj['id'] ? 'selected' : '' ?>
-                        >
-                            <?= htmlspecialchars($obj['text']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                    <select name="id_objetivo" id="id_objetivo" class="form-select select2" required>
+                        <option value="">Selecione...</option>
+                        <?php foreach ($objetivos as $obj): ?>
+                            <option 
+                                value="<?= $obj['id'] ?>"
+                                data-descricao="<?= htmlspecialchars($obj['text']) ?>"
+                                <?= ($formData['id_objetivo'] ?? '') === $obj['id'] ? 'selected' : '' ?>
+                            >
+                                <?= htmlspecialchars($obj['text']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
             </div>
             <div class="col-md-6">
                 <label for="descricao" class="form-label fw-semibold">
@@ -561,6 +575,9 @@ include __DIR__ . '/../templates/sidebar.php';
                 <div id="resultadoAnaliseKR" class="mt-3"></div>
             </div>
             <div class="col-12 text-end">
+                <button type="button" id="cancelKR" class="btn btn-outline-secondary px-4 py-2 mt-3">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
                 <button type="submit" class="btn btn-success px-4 py-2 mt-3">
                     <i class="bi bi-save me-1"></i> Salvar KR
                 </button>
@@ -576,14 +593,20 @@ document.addEventListener("DOMContentLoaded", function(){
     popoverTriggerList.forEach(function (popoverTriggerEl) {
         new bootstrap.Popover(popoverTriggerEl, {container: 'body'});
     });
+
+    // Botão Cancelar com confirmação
+    document.getElementById('cancelKR').addEventListener('click', function(){
+        if (confirm('Tem certeza que deseja cancelar? As informações não salvas serão perdidas.')) {
+            window.history.back();
+        }
+    });
 });
 </script>
-
-
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
 <script>
 $(document).ready(function () {
     // Ativa selects com Select2

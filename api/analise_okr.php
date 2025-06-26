@@ -51,7 +51,7 @@ Use frases curtas, emojis e uma linguagem inspiradora."
             "content" => $nome
         ]
     ],
-    "temperature" => 0.7
+    "temperature" => 0.5
 ];
 
 $ch = curl_init('https://api.openai.com/v1/chat/completions');

@@ -45,6 +45,14 @@ $statusKR = fetchDropdownData($connOKR, "SELECT id_status, descricao_exibicao FR
 $formData = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
 
+// 🔘 Pré-seleção de Objetivo e KR via GET
+if (isset($_GET['id_objetivo']) && empty($formData['id_objetivo'])) {
+    $formData['id_objetivo'] = $_GET['id_objetivo'];
+}
+if (isset($_GET['id_kr']) && empty($formData['id_kr'])) {
+    $formData['id_kr'] = $_GET['id_kr'];
+}
+
 $mensagemSistema = '';
 if (!empty($_SESSION['erro_iniciativa'])) {
     $mensagemSistema = "<div class='alert alert-danger mt-3'>" . $_SESSION['erro_iniciativa'] . "</div>";
@@ -99,6 +107,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Se o prazo não foi preenchido, buscar o prazo do KR (data_fim em key_results)
+    if (empty($dt_prazo)) {
+        $sqlPrazoKR = "SELECT data_fim FROM key_results WHERE id_kr = ?";
+        $stmtPrazo = sqlsrv_query($connOKR, $sqlPrazoKR, [$id_kr]);
+        if ($stmtPrazo && $rowPrazo = sqlsrv_fetch_array($stmtPrazo, SQLSRV_FETCH_ASSOC)) {
+            // data_fim vem como objeto DateTime
+            if ($rowPrazo['data_fim']) {
+                $dt_prazo = date_format($rowPrazo['data_fim'], 'Y-m-d');
+            }
+        }
+    }
+
     // 🔧 Geração do ID da Iniciativa
     $sqlBusca = "SELECT COUNT(*) AS total FROM iniciativas WHERE id_kr = ?";
     $stmtBusca = sqlsrv_query($connOKR, $sqlBusca, [$id_kr]);
@@ -148,8 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $_SESSION['sucesso_iniciativa'] = 'Iniciativa criada com sucesso!';
-    header('Location: ' . $_SERVER['REQUEST_URI']);
+    // redireciona para o detalhe do Objetivo, informando qual KR deve abrir
+    header(
+        'Location: /forecast/views/OKR_detalhe_objetivo.php'
+        . '?id=' . urlencode($id_objetivo)
+        . '&open_kr=' . urlencode($id_kr)
+    );
     exit;
 }
 
@@ -226,7 +250,10 @@ include __DIR__ . '/../templates/sidebar.php';
                 <select name="id_objetivo" id="id_objetivo" class="form-select select2" required>
                     <option value="">Selecione...</option>
                     <?php foreach ($objetivos as $obj): ?>
-                        <option value="<?= $obj['id'] ?>"><?= htmlspecialchars($obj['text']) ?></option>
+                        <option value="<?= $obj['id'] ?>"
+                            <?= (isset($formData['id_objetivo']) && $formData['id_objetivo'] === $obj['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($obj['text']) ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -358,6 +385,17 @@ $(document).ready(function() {
             $krSelect.html('<option value="">Selecione o Objetivo primeiro</option>');
         }
     });
+    <?php if (!empty($formData['id_objetivo'])): ?>
+    $('#id_objetivo').val('<?= $formData['id_objetivo'] ?>').trigger('change');
+    <?php if (!empty($formData['id_kr'])): ?>
+    var _try = setInterval(function(){
+    if ($('#id_kr option[value="<?= $formData['id_kr'] ?>"]').length) {
+        $('#id_kr').val('<?= $formData['id_kr'] ?>').trigger('change');
+        clearInterval(_try);
+    }
+    }, 200);
+    <?php endif; ?>
+    <?php endif; ?>
 });
 </script>
 

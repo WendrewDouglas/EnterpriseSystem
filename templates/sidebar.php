@@ -39,16 +39,10 @@
             <div class="collapse ms-3" id="forecastSubmenu2">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a href="index.php?page=OKR_consulta" class="nav-link">📋 Consulta</a>
+                        <a href="index.php?page=OKR_mapa" class="nav-link">🗺️ Mapa Estratégico</a>
                     </li>
                     <li class="nav-item">
-                        <a href="index.php?page=OKR_novo_objetivo" class="nav-link">🚀 Novo Objetivo</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="index.php?page=OKR_novo_kr" class="nav-link">📈 Novo KR</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="index.php?page=OKR_novo_iniciativa" class="nav-link">🛠️ Nova Iniciativa</a>
+                        <a href="index.php?page=OKR_consulta" class="nav-link">📝 Acompanhamento</a>
                     </li>
                     <li class="nav-item">
                         <a href="index.php?page=OKR_aprovacao" class="nav-link">✅ Aprovações</a>

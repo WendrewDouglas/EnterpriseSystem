@@ -119,16 +119,9 @@ Sua resposta **deve ser formatada como um painel visual em HTML**, simulando um 
   <div style='margin-bottom:16px;'>
     <strong>📌 Pontos de melhoria:</strong>
     <ol style='margin:8px 0 0 20px;'>
-      <li><strong>Nome do Key Result:</strong> [ANÁLISE]</li>
-      <li><strong>Análise do tipo de KR:</strong> [ANÁLISE]</li>
-      <li><strong>Análise da natureza do KR:</strong> [ANÁLISE]</li>
-      <li><strong>Análise de baseline e meta:</strong> [ANÁLISE]</li>
-      <li><strong>Análise da unidade de medida:</strong> [ANÁLISE]</li>
-      <li><strong>Análise da direção:</strong> [ANÁLISE]</li>
-      <li><strong>Análise da frequência:</strong> [ANÁLISE]</li>
-      <li><strong>Análise das datas:</strong> [ANÁLISE]</li>
-      <li><strong>Análise da margem de confiança:</strong> [ANÁLISE]</li>
-      <li><strong>Análise das observações:</strong> [ANÁLISE]</li>
+      <li><strong>1º ponto de melhoria:</strong> [ANÁLISE]</li>
+      <li><strong>2º ponto de melhoria:</strong> [ANÁLISE]</li>
+      <li><strong>...(Quantos pontos de melhoria existirem):</strong> [ANÁLISE]</li>
     </ol>
   </div>
   <div style='margin-bottom:16px;'>
