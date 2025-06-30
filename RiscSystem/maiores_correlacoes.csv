@@ -1,0 +1,53 @@
+feature_1,feature_2,correlation
+origem_CONSUMIDOR,origem_REVENDEDOR,-1.0000000000000004
+user_abertura_FABRICANTE,user_abertura_POSTO,-0.999999999999999
+num_os,pedido,0.9897493798121847
+linha_CENTRÍFUGA,modelo_CENTRIFUGA,0.978835827421963
+finalidade_REPROCESSO,defeito_constatado_REPROCESSO - ESTÉTICO/FUNCIONAL,0.9316591399768801
+gostar,ruim,0.8991742288962837
+vlr_mercadoria,vlr_pedido,0.8960952757924524
+queimar,cheirar,0.8766853693928172
+qtd_pedido,tp_pedido_Garantia,0.8721079974411593
+conforme,anexar,0.8455266943338149
+polia,cubo,0.841192381685451
+gostar,defeito_constatado_GOSTO RUIM,0.8227370476343528
+congelar,defeito_constatado_CONGELANDO A ÁGUA,0.7984990170051901
+reprocesso,finalidade_REPROCESSO,0.7759210766384472
+reprocesso,defeito_constatado_REPROCESSO - ESTÉTICO/FUNCIONAL,0.7752012794886552
+nao_gelo,defeito_constatado_NÃO GELA,0.7712618598032902
+finalidade_GARANTIA,finalidade_REPROCESSO,-0.7645990624685706
+ruim,defeito_constatado_GOSTO RUIM,0.7519246413398355
+finalidade_GARANTIA,defeito_constatado_REPROCESSO - ESTÉTICO/FUNCIONAL,-0.7489904830113485
+finalidade_REPROCESSO,user_abertura_POSTO,0.7381397303543276
+finalidade_REPROCESSO,user_abertura_FABRICANTE,-0.7381397303543259
+estetico,problema,0.7340611994289687
+st_posto_Ativo,st_posto_Inativo,-0.7198288903068701
+defeito_constatado_REPROCESSO - ESTÉTICO/FUNCIONAL,user_abertura_POSTO,0.7168010693411121
+defeito_constatado_REPROCESSO - ESTÉTICO/FUNCIONAL,user_abertura_FABRICANTE,-0.7168010693411103
+nao_desligar,defeito_constatado_NÃO DESLIGA,0.7156711493176842
+defeito_constatado_LÂMPADA NÃO ACENDE,modelo_GOURMET 80,0.7071034572463626
+aberta,status_FINALIZADA (CANCELADA PELO FABRICANTE),0.6945278745833909
+pedido,abertura_janeiro,-0.6918764738322891
+num_os,abertura_janeiro,-0.6904888209523637
+id_consumidor,finalidade_GARANTIA,0.6890466911818202
+esteticofuncional,st_posto_Em Processo de Descredenciamento,0.6783228458234134
+st_posto_Ativo,st_posto_Em Processo de Descredenciamento,-0.6765556265212207
+transbordar,defeito_constatado_TRANSBORDANDO ÁGUA,0.6755570784703027
+nao_drenar,defeito_constatado_NÃO DRENA,0.6740126848128496
+funcionar,parar,0.6691498307022864
+nao_agitar,defeito_constatado_NÃO AGITA,0.6661900202163241
+nao_centrifugo,defeito_constatado_NÃO CENTRIFUGA,0.6503580727883129
+travar,manipulo,0.6495064239397774
+abertura_janeiro,pedido_janeiro,0.6422804495792943
+abertura_junho,pedido_junho,0.6319015811335499
+video,conforme,0.6182448244940919
+pedido,pedido_janeiro,-0.6175279373330695
+finalidade_GARANTIA,user_abertura_POSTO,-0.617188125723092
+finalidade_GARANTIA,user_abertura_FABRICANTE,0.6171881257230902
+sair,fumaca,0.6171164527414736
+nao_entrar,defeito_constatado_NÃO ENTRA ÁGUA,0.6170851480594509
+nao_ligar,defeito_constatado_NÃO LIGA,0.6166479047064559
+video,anexo,0.6139289433329341
+reprocesso,finalidade_GARANTIA,-0.6108762427291233
+num_os,abertura_junho,0.606818612062441
+pedido,pedido_junho,0.606611011766576

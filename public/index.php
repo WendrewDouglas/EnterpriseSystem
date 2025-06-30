@@ -12,6 +12,7 @@ require_once '../config.php';
 // Verifica se existe o parâmetro "page" na URL amigável
 $page = $_GET['page'] ?? 'dashboard';
 
+
 // Lista de páginas permitidas para evitar acessos indevidos
 $allowed_pages = [
     'login',
@@ -59,7 +60,8 @@ $allowed_pages = [
     'OKR_consulta',
     'pdv_clientes',
     'editar_objetivo',
-    'OKR_mapa'
+    'OKR_mapa',
+    'process_approval'
 ];
 
 if (in_array($page, $allowed_pages)) {

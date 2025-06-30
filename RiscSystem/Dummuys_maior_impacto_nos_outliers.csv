@@ -1,0 +1,281 @@
+dummy,pct_outliers,pct_normais,diferenca
+id_consumidor,67899700.0,75844420.69,-7944720.69
+id_posto,702273.98,883401.73,-181127.75
+id_revendedor,2333787.04,2445386.24,-111599.2
+num_os,5071952012.58,5072024461.96,-72449.37
+pedido,30688617.12,30738317.04,-49699.92
+tp_pedido_Garantia,93.83,62.16,31.67
+st_posto_Ativo,71.37,95.76,-24.39
+st_posto_Em Processo de Descredenciamento,25.97,1.74,24.23
+barulho,29.58,10.51,19.07
+esteticofuncional,18.9,1.65,17.25
+linha_LAVADORA AUTO,31.15,14.38,16.77
+modelo_CENTRIFUGA,24.36,9.0,15.36
+linha_CENTRÍFUGA,24.26,9.06,15.21
+finalidade_GARANTIA,60.21,74.32,-14.11
+pedido_fevereiro,23.74,10.06,13.68
+motor,15.53,1.92,13.61
+problema,15.86,3.2,12.65
+defeito_constatado_REPROCESSO - ESTÉTICO/FUNCIONAL,30.15,17.52,12.63
+finalidade_REPROCESSO,28.21,16.79,11.42
+nao_ligar,1.85,12.53,-10.67
+fazer,11.35,1.16,10.19
+fabric_agosto,19.8,9.7,10.1
+ligar,11.02,0.94,10.08
+compra_marco,4.75,14.67,-9.92
+roupa,10.4,0.5,9.9
+compra_outubro,15.53,5.65,9.88
+modelo_LCA 12,12.2,2.69,9.52
+fechamento_maio,26.31,17.04,9.26
+user_abertura_FABRICANTE,63.82,73.05,-9.24
+user_abertura_POSTO,36.18,26.95,9.24
+bater,11.21,2.05,9.16
+defeito_constatado_NÃO LIGA,6.98,16.01,-9.03
+cuba,10.73,1.9,8.84
+pedido_maio,18.28,9.7,8.59
+nao_bater,3.09,10.84,-7.76
+modelo_LCS 10,11.49,3.76,7.73
+cubo,7.79,0.08,7.7
+polia,7.79,0.14,7.65
+defeito,8.21,0.64,7.58
+estetico,12.11,4.76,7.35
+compra_fevereiro,15.67,8.35,7.32
+reprocesso,18.76,11.55,7.21
+batedor,8.07,0.93,7.14
+ficar,7.22,0.56,6.66
+modelo_COMUM,12.06,18.7,-6.64
+defeito_constatado_BARULHO AO AGITAR,8.45,1.96,6.49
+avariar,6.93,0.44,6.49
+modelo_LCS 14,8.5,2.18,6.32
+pedido_janeiro,14.96,8.82,6.13
+ta,6.08,0.14,5.94
+status_FINALIZADA (SEM RESOLUÇÃO),10.64,4.75,5.88
+abertura_marco,11.59,17.41,-5.83
+abertura_fevereiro,21.46,15.66,5.8
+botao,6.32,0.75,5.57
+defeito_constatado_BARULHO AO CENTRIFUGAR,8.5,3.07,5.43
+centrifugacao,5.7,0.38,5.32
+compra_novembro,12.3,7.1,5.2
+travar,7.17,1.97,5.2
+fabric_outubro,14.96,9.78,5.17
+defeito_constatado_NÃO BATE,4.04,9.15,-5.12
+nao_giro,5.46,0.38,5.08
+status_FINALIZADA (PAGAMENTO BLOQUEADO),20.7,25.68,-4.97
+fechamento_abril,10.21,15.08,-4.87
+fabric_fevereiro,1.28,5.85,-4.57
+pedido_abril,18.85,14.37,4.48
+fechamento_junho,6.22,10.58,-4.36
+fabric_abril,10.97,6.61,4.36
+nao_agitar,0.43,4.62,-4.2
+modelo_LCA 11,6.13,2.01,4.12
+centrifugo,4.37,0.26,4.11
+vazar,5.98,1.9,4.08
+compra_setembro,1.14,5.03,-3.89
+nao_centrifugo,1.14,5.02,-3.88
+pedido_marco,6.74,10.6,-3.86
+nao_sair,5.27,1.47,3.81
+aberta,19.47,23.22,-3.75
+centrifugar,4.51,0.76,3.75
+vazamento,4.27,7.99,-3.72
+defeito_constatado_MANÍPULO TRAVADO,5.41,1.72,3.69
+rachar,5.03,1.34,3.69
+compra_junho,4.89,8.55,-3.66
+baixo,4.94,1.32,3.62
+aguo,14.53,10.99,3.54
+parte,3.85,0.41,3.44
+fabric_maio,2.85,6.08,-3.24
+fechamento_fevereiro,17.14,13.93,3.21
+processo,3.47,0.34,3.13
+compra_agosto,3.04,6.16,-3.12
+maquino,3.42,0.54,2.88
+dentro,3.09,0.21,2.88
+status_FINALIZADA,49.19,46.35,2.84
+lavagem,3.18,0.37,2.81
+nao_funcionar,2.8,5.55,-2.75
+abertura_junho,9.97,12.68,-2.71
+finalidade_REVENDEDOR,11.59,8.9,2.69
+fabric_setembro,12.68,10.0,2.68
+pedido_junho,11.25,8.6,2.65
+tomar,2.85,0.26,2.59
+fabric_janeiro,4.04,6.6,-2.57
+ciclo,2.8,0.25,2.55
+linha_SEMI AUTOMÁTICA,34.9,32.39,2.51
+compra_maio,6.41,8.88,-2.47
+lavadora,2.66,0.23,2.43
+estranho,2.85,0.42,2.43
+encaixar,2.61,0.2,2.42
+cliente,2.71,0.3,2.41
+fabric_julho,5.84,8.24,-2.4
+so,2.56,0.23,2.33
+sair,3.13,0.89,2.25
+tampa,4.65,2.41,2.24
+status_FINALIZADA (CANCELADA PELO FABRICANTE),10.49,12.73,-2.23
+defeito_constatado_NÃO AGITA,2.99,5.16,-2.17
+modelo_MULTILINHAS,9.83,12.0,-2.17
+fechamento_janeiro,9.26,7.26,2.0
+defeito_constatado_NÃO DRENA,0.14,2.1,-1.96
+foto,2.18,0.26,1.93
+anexo,2.56,0.7,1.86
+parar,3.04,1.22,1.81
+desligar,2.28,0.47,1.81
+tanquinho,2.04,0.24,1.8
+comecar,1.95,0.22,1.73
+nao_drenar,0.09,1.78,-1.69
+fabric_novembro,6.93,8.61,-1.68
+defeito_constatado_VAZAMENTO DE ÁGUA,3.51,1.85,1.66
+nao_fazer,1.95,0.35,1.6
+trar,1.85,0.29,1.56
+fechamento_marco,11.4,12.89,-1.5
+timer,1.71,0.22,1.49
+lavar,1.71,0.24,1.47
+defeito_constatado_NÃO SAI ÁGUA,1.95,0.51,1.44
+defeito_constatado_PROBLEMA ESTÉTICO,4.42,5.84,-1.43
+defeito_constatado_PRODUTO SEM DEFEITO,0.66,2.06,-1.39
+defeito_constatado_NÃO GELA,0.0,1.38,-1.38
+funcional,1.8,0.45,1.36
+nao_gelo,0.19,1.51,-1.32
+abertura_maio,15.67,14.36,1.31
+status_AGUARDANDO PEÇAS,1.61,2.92,-1.3
+status_AGUARDANDO CONSERTO,5.84,4.57,1.27
+solto,1.57,0.32,1.25
+linha_DIVERSOS,0.09,1.33,-1.24
+lateral,1.9,0.67,1.23
+gelar,1.47,0.26,1.21
+status_ABERTA CALL-CENTER,0.14,1.32,-1.18
+fabric_marco,4.04,5.21,-1.18
+modelo_FILTRO,1.8,0.66,1.14
+compra_dezembro,10.02,8.88,1.14
+defeito_constatado_VAZAMENTO PELO ACOPLAMENTO,0.24,1.37,-1.13
+compra_julho,3.99,5.11,-1.12
+compra_abril,10.3,9.19,1.11
+defeito_constatado_VAZAMENTO PELA CUBA,6.03,4.97,1.06
+danificar,1.28,0.25,1.04
+linha_BEBEDOURO,3.37,4.37,-1.0
+status_AUDITORIA,1.19,0.19,1.0
+nao_desligar,0.33,1.31,-0.98
+forca,0.09,1.07,-0.98
+defeito_constatado_NÃO ABRE A TAMPA,1.42,0.47,0.95
+defeito_constatado_CHEIRANDO QUEIMADO,0.0,0.93,-0.93
+abertura_janeiro,20.09,19.22,0.87
+esquentar,1.57,0.79,0.78
+base,1.71,0.96,0.75
+status_AGUARDANDO ANÁLISE,0.14,0.85,-0.71
+modelo_LCA 15,0.38,1.08,-0.7
+defeito_constatado_PAINEL NÃO LIGA,2.09,1.39,0.7
+defeito_constatado_BARULHO,1.52,2.19,-0.67
+fabric_dezembro,6.36,7.03,-0.67
+defeito_constatado_NÃO REALIZADO +30 DIAS,0.71,0.05,0.66
+painel,1.8,1.15,0.66
+defeito_constatado_NÃO CENTRIFUGA,5.32,5.97,-0.65
+cheirar,1.9,1.28,0.62
+modelo_LCT 6,0.0,0.59,-0.59
+modelo_PUR PREMIUM,0.38,0.97,-0.59
+modelo_LCS 20,6.03,6.61,-0.58
+video,1.38,0.81,0.57
+defeito_constatado_NÃO DESLIGA,1.8,1.24,0.57
+abertura_abril,21.23,20.66,0.56
+gostar,0.0,0.55,-0.55
+linha_DEPURADOR,0.05,0.58,-0.53
+fumaca,1.14,0.62,0.52
+compra_janeiro,11.97,12.43,-0.47
+ruim,0.0,0.47,-0.47
+status_FINALIZADA (REPROVADA AUDITORIA),0.05,0.49,-0.44
+defeito_constatado_GOSTO RUIM,0.0,0.44,-0.44
+quebrar,2.28,1.86,0.42
+modelo_LCS 15,0.0,0.41,-0.41
+transbordar,0.0,0.39,-0.39
+cesto,0.62,0.23,0.39
+descolar,0.62,0.24,0.38
+nao_fechar,0.0,0.36,-0.36
+defeito_constatado_OBJETO ESTRANHO NA PEÇA,0.14,0.49,-0.35
+fabric_junho,6.89,6.57,0.32
+defeito_constatado_TRANSBORDANDO ÁGUA,0.76,0.45,0.31
+congelar,0.0,0.31,-0.31
+defeito_constatado_BATENDO NAS LATERAIS,0.28,0.59,-0.3
+queimar,1.76,1.47,0.29
+derreter,0.0,0.27,-0.27
+defeito_constatado_DÚVIDAS DE USO,0.0,0.27,-0.27
+rachadura,0.0,0.25,-0.25
+defeito_constatado_CONGELANDO A ÁGUA,0.05,0.29,-0.24
+nao_abrir,0.71,0.48,0.23
+defeito_constatado_NÃO ENTRA ÁGUA,0.05,0.28,-0.23
+nao_entrar,0.52,0.3,0.22
+soltar,0.52,0.32,0.21
+defeito_constatado_AGITA SEM ÁGUA,0.09,0.3,-0.21
+agitar,0.38,0.58,-0.2
+abrir,0.09,0.29,-0.19
+defeito_constatado_VAZAMENTO PELA MANGUEIRA,0.19,0.38,-0.19
+modelo_ACQUA COMPRESSOR,0.43,0.61,-0.18
+defeito_constatado_CONSUMIDOR NÃO ACEITA REPARO,0.0,0.18,-0.18
+mangueiro,0.09,0.26,-0.16
+conforme,0.52,0.36,0.16
+dar,0.14,0.3,-0.16
+st_posto_Inativo,2.66,2.5,0.16
+manipulo,1.28,1.43,-0.15
+defeito_constatado_BASE DERRETIDA,0.0,0.14,-0.14
+defeito_constatado_VAZAMENTO DE ÓLEO,0.05,0.19,-0.14
+anexar,0.43,0.29,0.13
+defeito_constatado_FALTANDO PEÇA NO PRODUTO,0.0,0.13,-0.13
+status_AGUARDANDO RETIRADA,0.0,0.13,-0.13
+defeito_constatado_NÃO ENXAGUA,0.0,0.12,-0.12
+defeito_constatado_NÃO REALIZADO  SEM PEÇAS REPOSIÇÃO,0.24,0.12,0.12
+modelo_LCM 15,0.0,0.12,-0.12
+defeito_constatado_CESTO SOLTO,0.0,0.11,-0.11
+defeito_constatado_VAZAMENTO ENTRE A CUBA E PAINEL,0.43,0.54,-0.11
+defeito_constatado_PROBLEMAS NA INSTALAÇÃO,0.0,0.11,-0.11
+defeito_constatado_VAZAMENTO PELO DRENO,0.0,0.1,-0.1
+modelo_LCS 8,0.0,0.09,-0.09
+"modelo_LCT 4,5",0.19,0.28,-0.09
+fraco,0.47,0.38,0.09
+daguar,0.38,0.47,-0.09
+modelo_COOK 60,0.0,0.09,-0.09
+defeito_constatado_ESQUENTANDO,0.57,0.48,0.09
+modelo_COOK 80,0.0,0.08,-0.08
+modelo_NEW PIONEER,0.0,0.08,-0.08
+modelo_ACQUA ELETRONICO,0.0,0.08,-0.08
+defeito_constatado_CONSUMIDOR AUSENTE,0.05,0.13,-0.08
+defeito_constatado_BOTÃO TRAVADO,0.0,0.08,-0.08
+defeito_constatado_PINGANDO,0.09,0.17,-0.07
+defeito_constatado_CARACTERÍSTICAS DE PRODUTO,0.0,0.06,-0.06
+funcionar,1.42,1.36,0.06
+defeito_constatado_PEÇA DESCOLANDO,0.0,0.05,-0.05
+defeito_constatado_SEM FORÇA,0.0,0.05,-0.05
+defeito_constatado_PRENDENDO AS ROUPAS,0.0,0.05,-0.05
+lento,0.33,0.29,0.04
+defeito_constatado_DANDO CHOQUE,0.0,0.04,-0.04
+linha_PEÇAS,0.0,0.04,-0.04
+defeito_constatado_VAZAMENTO PELO LADRÃO,0.0,0.04,-0.04
+defeito_constatado_BARULHO AO ENCHER,0.09,0.13,-0.04
+origem_CONSUMIDOR,100.0,99.96,0.04
+origem_REVENDEDOR,0.0,0.04,-0.04
+modelo_DCM 60,0.05,0.02,0.03
+status_FINALIZADA (CANCELADA PELO POSTO),0.0,0.02,-0.02
+modelo_BEB PREMIUM,0.0,0.01,-0.01
+modelo_LCS 16,0.0,0.01,-0.01
+defeito_constatado_SINISTRO,0.0,0.01,-0.01
+modelo_LCS 18,0.0,0.01,-0.01
+linha_ARMÁRIO,0.0,0.01,-0.01
+defeito_constatado_SAI POUCA ÁGUA,0.0,0.0,-0.0
+defeito_constatado_DERRETENDO,0.0,0.0,-0.0
+status_AGUARDANDO INFORMAR OS PRODUTOS,0.0,0.0,-0.0
+defeito_constatado_LÂMPADA NÃO ACENDE,0.0,0.0,-0.0
+defeito_constatado_SAI ÁGUA MORNA/QUENTE,0.0,0.0,-0.0
+modelo_GOURMET 80,0.0,0.0,-0.0
+fechamento_novembro,0.0,0.0,0.0
+fechamento_dezembro,0.0,0.0,0.0
+abertura_julho,0.0,0.0,0.0
+abertura_agosto,0.0,0.0,0.0
+abertura_setembro,0.0,0.0,0.0
+abertura_outubro,0.0,0.0,0.0
+abertura_novembro,0.0,0.0,0.0
+abertura_dezembro,0.0,0.0,0.0
+fechamento_julho,0.0,0.0,0.0
+fechamento_agosto,0.0,0.0,0.0
+fechamento_setembro,0.0,0.0,0.0
+fechamento_outubro,0.0,0.0,0.0
+pedido_julho,0.0,0.0,0.0
+pedido_agosto,0.0,0.0,0.0
+pedido_setembro,0.0,0.0,0.0
+pedido_outubro,0.0,0.0,0.0
+pedido_novembro,0.0,0.0,0.0
+pedido_dezembro,0.0,0.0,0.0

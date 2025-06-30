@@ -12,5 +12,5 @@ SELECT
 
 FROM ATWEB.[atweb_00012].[dbo].[PostosAutorizados] A
 
-	WHERE 1=1
+	WHERE 1=1;
 		--AND STATUS = 'ATIVO'

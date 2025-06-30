@@ -418,7 +418,7 @@ $krs_risco_global = $total_krs ?
                 <?php endif; ?>
                 <!-- 🔘 BOTÃO DE NOVO OBJETIVO -->
                 <div class="mt-3 text-center">
-                    <a href="OKR_novo_objetivo.php" class="btn btn-light border rounded-circle" title="Novo Objetivo">
+                    <a href="index.php?page=OKR_novo_objetivo" class="btn btn-light border rounded-circle" title="Novo Objetivo">
                         <i class="bi bi-plus-lg fs-4"></i>
                     </a>
                 </div>
